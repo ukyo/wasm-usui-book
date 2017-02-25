@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>WebAssembly Examples</title>
+  </head>
+  <body>
+    <script>
+      function createWasmInstance(path, importObj) {
+        return fetch(path).then(res => res.arrayBuffer()).then(buffer => WebAssembly.instantiate(buffer, importObj));
+      }
+    </script>
+  </body>
+</html>
