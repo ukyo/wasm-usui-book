@@ -80,34 +80,55 @@ fetch("import.wasm")
 ```
 (module
   (memory (export "mem") 1)
-  (func (export "add_each") (param $x i32) (param $n i32)
+  (func (export "add_each") (param $x i32) (param $offset i32) (param $n i32)
     (local $i i32)
+    (local $ptr i32)
     i32.const 0
     set_local $i
-    block $exit
-      loop $cont
+    get_local $offset
+    i32.const 4
+    i32.mul
+    set_local $ptr
+    block $break
+      loop $continue
+        ;; ループのブレーク判定
         get_local $i
         get_local $n
         i32.eq
-        br_if $exit
-        get_local $i
-        i32.const 4
-        i32.mul
-        get_local $i
-        i32.const 4
-        i32.mul
+        br_if $break
+        ;; メモリーの値を更新
+        get_local $ptr
+        get_local $ptr
         i32.load
         get_local $x
         i32.add
         i32.store
+        ;; インクリメントしてループ先頭に飛ぶ
         get_local $i
         i32.const 1
         i32.add
         set_local $i
-        br $cont
+        get_local $ptr
+        i32.const 4
+        i32.add
+        set_local $ptr
+        br $continue
       end
     end)
 )
+```
+
+```js
+fetch("memory.wasm")
+.then(res => res.arrayBuffer())
+.then(buffer => WebAssembly.instantiate(buffer))
+.then(obj => {
+  const array = new Uint32Array(obj.instance.exports.mem.buffer);
+  obj.instance.exports.add_each(10, 0, 5);
+  console.log(array); // [10, 10, 10, 10, 10, 0, 0, ...]
+  obj.instance.exports.add_each(30, 3, 3);
+  console.log(array); // [10, 10, 10, 40, 40, 30, 0, ...]
+});
 ```
 
 ## 関数テーブル
