@@ -1,19 +1,22 @@
 (module
   (memory (export "mem") 1)
-  (func (export "add_each") (param $x i32) (param $offset i32) (param $n i32)
-    (local $i i32)
+  (func (export "add_each") (param $x i32) (param $offset i32) (param $length i32)
     (local $ptr i32)
-    i32.const 0
-    set_local $i
+    (local $end i32)
     get_local $offset
     i32.const 4
     i32.mul
-    set_local $ptr
+    tee_local $ptr
+    get_local $length
+    i32.const 4
+    i32.mul
+    i32.add
+    set_local $end
     block $break
       loop $continue
         ;; ループのブレーク判定
-        get_local $i
-        get_local $n
+        get_local $ptr
+        get_local $end
         i32.eq
         br_if $break
         ;; メモリーの値を更新
@@ -24,10 +27,6 @@
         i32.add
         i32.store
         ;; インクリメントしてループ先頭に飛ぶ
-        get_local $i
-        i32.const 1
-        i32.add
-        set_local $i
         get_local $ptr
         i32.const 4
         i32.add
