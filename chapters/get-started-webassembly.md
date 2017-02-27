@@ -2,7 +2,7 @@
 
 この章ではWebAssemblyのテキスト表現で簡単な例を書いてみて、WebAssemblyにはどんな機能があるのかをつかんでもらおうかと思います。
 
-## 足し算してみる
+## 足し算をしてみる
 
 いわゆるHello World的なやつです。WebAssemblyのモジュールに整数の足し算を行う関数を定義して、JavaScriptから使えるようにしてみます。
 
@@ -131,9 +131,77 @@ fetch("memory.wasm")
 });
 ```
 
-## 関数テーブル
+## if文的なことをしてみる
 
-wip
+## switch文的なことをしてみる
+
+blockとbr_tableを組み合わせたらswitch文が!なお、可読性は低い。
+
+```
+(module
+  (func (export "switch") (param $i i32) (result i32)
+    block $a
+      block $b
+        block $c
+          get_local $i
+          br_table $a $b $c
+        end
+        i32.const 333
+        return
+      end
+      i32.const 222
+      return
+    end
+    i32.const 111)
+)
+```
+
+```js
+fetch("switch.wasm")
+.then(res => res.arrayBuffer())
+.then(buffer => WebAssembly.instantiate(buffer))
+.then(obj => {
+  console.log(obj.instance.exports.switch(0)); // 111
+  console.log(obj.instance.exports.switch(1)); // 222
+  console.log(obj.instance.exports.switch(2)); // 333
+});
+```
+
+## 関数テーブルをつかってみる
+
+関数テーブルで関数を間接参照して呼び出せます。switch文よりは可読性高い。
+テーブルの仕組みはもうちょっと汎用性が高い配列といった感じだが、今のところ関数のみ有効。
+
+```
+(module
+  (type $return_i32 (func (result i32)))
+  (table (export "tbl") anyfunc (elem $f1 $f2 $f3))
+
+  (func $f1 (result i32) i32.const 111)
+  (func $f2 (result i32) i32.const 222)
+  (func $f3 (result i32) i32.const 333)
+
+  (func (export "call_indirect") (param $i i32) (result i32)
+    get_local $i
+    call_indirect $return_i32)
+)
+```
+
+```js
+fetch("table.wasm")
+.then(res => res.arrayBuffer())
+.then(buffer => WebAssembly.instantiate(buffer))
+.then(obj => {
+  console.log(obj.instance.exports.call_indirect(0)); // 111
+  console.log(obj.instance.exports.call_indirect(1)); // 222
+  console.log(obj.instance.exports.call_indirect(2)); // 333
+
+  // エクスポートしたtableはJSから使えるぞ!
+  console.log(obj.instance.exports.tbl.get(0)()); // 111
+  console.log(obj.instance.exports.tbl.get(1)()); // 222
+  console.log(obj.instance.exports.tbl.get(2)()); // 333
+});
+```
 
 ## この章のまとめ
 
@@ -141,4 +209,5 @@ wip
 * エクスポートされた色々はインスタンス化されたモジュールの`exports`プロパティから見れる
 * 外部のモジュールをインポートする仕組みがある
 * 連続したメモリ領域を使用できる
+* 一通りの制御構文がつかえる
 * 関数テーブルが使える
