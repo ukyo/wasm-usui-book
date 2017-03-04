@@ -1,5 +1,9 @@
 # Text Format
 
+## 値の型
+
+`i32`, `i64`, `f32`, `f64` のいづれか。
+
 ## コメント
 
 いわゆるコメントです。
@@ -35,7 +39,7 @@ wasm module。1ファイル1moduleです。
 ```
 (module
   (type (func))                                     ;; 引数が0個で返り値がない関数
-  (type $label (func))                              ;; ラベル
+  (type $label (func))                              ;; ラベル付き
   (type $type1 (func (param i32) (result i32)))     ;; i32型の引数を一つ受け取り、i32型の値を返す
   (type $type2 (func (param i32 i64) (result f64))) ;; i32型の引数を一つ、i64型の引数を1つ受け取り、f64型の値を返す
 )
@@ -48,7 +52,7 @@ wasm module。1ファイル1moduleです。
 ```
 (module
   (func)                               ;; 何もしない関数
-  (func $nop)                          ;; ラベル付けられる
+  (func $nop)                          ;; ラベル付き
   (func (param i32))                   ;; i32型の引数を1つ受け取る
   (func (param i32 i64))               ;; i32型、i64型の引数を受け取る
   (func (param $x i32))                ;; 引数にラベル付けてみる
@@ -87,6 +91,10 @@ table(型付き配列)を定義します。elemでtableに要素を挿入しま�
 ```
 (module
   (table 10 anyfunc)              ;; 型がanyfuncで10個の領域を持つtableを作成
+)
+
+(module
+  (table $tbl 10 anyfunc)         ;; ラベル付き
 )
 
 (module
@@ -134,7 +142,7 @@ table(型付き配列)を定義します。elemでtableに要素を挿入しま�
 
 ### memory, data
 
-memoryを作成します。memoryはmoduleに1個まで。dataでmemoryにバイト値を挿入します。
+memoryを定義します。moduleに1個まで定義できます。dataでmemoryにバイト値を挿入します。
 
 ```
 (module (memory 10))                     ;; 10ページ分(10 * 64KB)のメモリー確保
@@ -162,20 +170,253 @@ memoryを作成します。memoryはmoduleに1個まで。dataでmemoryにバイ
 
 ### import
 
+func, global, memoryまたはtableをインポートします。インポートされたmemory, tableにもmodule内に1個までという制限が適用されます。
+
+```
+;; importメインの記法
+(module
+  (import "mod1" "prop1" (func $f (param i32)))
+  (import "mod1" "prop2" (global $x i32))
+  (import "mod2" "prop1" (memory $mem 2))
+  (import "mod2" "prop2" (table $tbl 10 anyfunc))
+)
+
+;; func, global, memoryまたはtableメインの記法
+(module
+  (func $f (import "mod1" "prop1") (param i32))
+  (global $x (import "mod1" "prop2") i32)
+  (memory $mem (import "mod2" "prop1") 2)
+  (table $tbl (import "mod2" "prop2") 10 anyfunc)
+)
+```
+
+以下のようにJavaScript APIからインポートするオブジェクトを設定する。
+
+```js
+const importObject = {
+  mod1 : {
+    prop1: x => { /* ... */ },
+    prop2: 100
+  },
+  mod2: {
+    prop1: new WebAssembly.Memory({ initial: 2 }),
+    prop2: new WebAssembly.Table({ initial: 10 })
+  }
+};
+WebAssembly.instaniate(bufferSource, importObject);
+```
+
 ### export
+
+func, global, memoryまたはtableをエクスポートします。
+
+```
+;; 定義とexportを分けて書く記法
+(module
+  (func $f (param i32))
+  (global $x i32 (i32.const 100))
+  (memory $mem 2)
+  (table $tbl anyfunc (elem $f))
+
+  (export "f" (func $f))
+  (export "x" (global $x))
+  (export "mem" (memory $mem)) ;; 現状memoryは最大1個なので基本的に(memory 0)でOK
+  (export "tbl" (table $tbl))  ;; 上と同じ理由で(table 0)でOK
+)
+
+;; 定義に埋め込む記法
+(module
+  (func $f (export "f") (param i32))
+  (global $x (export "x") i32 (i32.const 100))
+  (memory $mem (export "mem") 2)
+  (table $tbl (export "tbl") anyfunc (elem $f))
+)
+```
+
+エクスポートされたfunc, global, memory, tableはJavaScriptの実行環境上でwasmモジュールのインスタンスから参照できます。
+
+```js
+WebAssembly.instaniate(bufferSource).then(obj => {
+  obj.instance.exports.f; // exported function
+  obj.instance.exports.x; // 100 イミュータブル
+  obj.instance.exports.mem; // WebAssembly.Memoryオブジェクト
+  obj.instance.exports.tbl; // WebAssembly.Tableオブジェクト
+});
+```
 
 ## コード本体
 
-スタック記法とS式記法の2種類が使えるのでそれぞれのパターン書く
+funcのコード本体部分について。WebAssemblyのバイナリ表現ではスタックマシンとして記述されます。テキスト表現においては、スタックマシンか、S式か、または両方を混ぜて記述することができます。
 
 ### 基本的なオペレータ
 
-i32.addとか
+wip: binary-formatのhogeを参照。
+
+スタックマシン。スペース区切りで`オペレータ 即値オペランド?`を1セットとして並べるだけです。
+
+```
+i32.const 1
+i32.const 2
+i32.add
+i32.const 3
+i32.sub
+```
+
+S式。普通にS式で構文木を作るだけです。
+
+```
+(i32.sub
+  (i32.add (i32.const 1) (i32.const 2))
+  (i32.const 3))
+```
 
 ### フロー系オペレータ
 
-block, if, loop, br, br_if, br_table
+#### block
+
+スタックマシン。対となるendオペレータまでをブロックとして扱います。
+
+```
+block $foo ;; ブロックにラベルを付けられる。可読性のために付けることを推奨。
+;; ...
+end
+
+block $bar f64 ;; value typeを指定することでブロック終了時に値をpushします
+  f64.const 1.1
+end
+```
+
+S式の場合はendは書かなくてOKです。
+
+```
+(block $foo
+  ;; ...
+)
+
+(block $bar f64
+  f64.const 1.1
+)
+```
+
+#### loop
+
+blockと同じなので略。
+
+#### if, else
+
+スタックマシン。
+
+```
+i32.const 1
+if            ;; スタックからオペランドをpopして0でなければブロックに入る
+;; ...
+end
+
+i32.const 1
+if i32        ;; 値をpushするifブロック
+  i32.const 100
+end
+
+i32.const 0
+if
+;; ...
+else          ;; オペランドが0ならこちらに飛ぶ
+;; ...
+end
+```
+
+S式。真の場合はthen、偽の場合はelseに飛ぶ。
+
+```
+(if (i32.const 1)
+  (then
+    ;; ...
+  ))
+
+(if i32 (i32.const 1)
+  (then (i32.const 100)))
+
+(if (i32.const 0)
+  (then
+    ;; ...
+  )
+  (else
+    ;; ...
+  ))
+```
+
+#### br, br_if, br_table
+
+対象のブロックに対する分岐命令。block, ifブロックならブロックを抜ける。loopブロックならブロック先頭に飛ぶ。
+
+スタックマシン。
+
+```
+block $foo
+  block $bar
+    br $foo                 ;; 対象ブロックに対して分岐(この場合$fooブロックを抜ける)
+  end
+end
+
+block $foo
+  block $bar
+    i32.const 1
+    br_if $foo              ;; popしたオペランドが非ゼロなら分岐
+  end
+end
+
+block $foo
+  block $bar
+    i32.const 0
+    br_table $foo $bar $foo ;; popしたオペランドをiとして即値オペランド列のi番目に指定されているブロックに対して分岐
+                            ;; 一番最後の即値オペランドはデフォルト値として扱われる
+  end
+end
+```
+
+S式。
+
+```
+(block $foo
+  (block $bar
+    br $foo
+  )
+)
+
+(block $foo
+  (block $bar
+    (br_if $foo (i32.const 1))
+  )
+)
+
+(block $foo
+  (block $bar
+    (br_table $foo $bar $foo (i32.const 0))
+  )
+)
+```
 
 ### load, store系オペレータ
 
-i32.load, i32.storeとか
+load, store系命令でオフセットとアライメントを指定する場合は以下のように記述する。
+
+スタックマシン。
+
+```
+i32.const 1
+i32.load offset=0         ;; オフセット指定
+
+i32.const 1
+i32.load align=4          ;; アライメント指定(2の乗数であること)
+
+i32.const 1
+i32.load offset=0 align=4 ;; 両方指定する場合はオフセットを先に書くこと
+```
+
+S式。
+
+```
+(i32.load offset=0 (i32.const 1))
+(i32.load align=4 (i32.const 1))
+(i32.load offset=0 align=4 (i32.const 1))
+```
