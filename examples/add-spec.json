@@ -1,0 +1,5 @@
+{"source_filename": "add.was",
+ "commands": [
+
+  {"type": "module", "line": 1, "filename": "add-spec.0.wasm"}, 
+  {"type": "assert_return", "line": 7, "action": {"type": "invoke", "field": "add", "args": [{"type": "i32", "value": "10"}, {"type": "i32", "value": "20"}]}, "expected": [{"type": "i32", "value": "30"}]}]}
