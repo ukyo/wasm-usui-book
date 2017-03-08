@@ -1,14 +1,15 @@
 # wasm-usui-book
 webassemblyの薄い本
 
-WebAssenbly is available in Firefox 52 now. Go to https://ukyo.github.io/wasm-usui-book/examples/ and run below codes.
+## Examples
 
-```js
-fetch("add.wasm")
-.then(res => res.arrayBuffer()) // ArrayBufferとしてロード
-.then(buffer => WebAssembly.instantiate(buffer)) // インスタンス化
-.then(obj => {
-  // instanceがインスタンスでexportsにエクスポートされたものが入ってきます
-  console.log(obj.instance.exports.add(1, 2)); // 3
-});
-```
+[https://ukyo.github.io/wasm-usui-book/examples/](https://ukyo.github.io/wasm-usui-book/examples/)
+
+## Chapters
+
+* [Intro](https://ukyo.github.io/wasm-usui-book/chapters/intro.md)
+* [Install Tools](https://ukyo.github.io/wasm-usui-book/chapters/install-tools.md)
+* [Get Started](https://ukyo.github.io/wasm-usui-book/chapters/get-started-webassembly.md)
+* [Binery Format](https://ukyo.github.io/wasm-usui-book/chapters/binary-format.md)
+* [Text Format](https://ukyo.github.io/wasm-usui-book/chapters/text-format.md)
+* [JavaScript APIs](https://ukyo.github.io/wasm-usui-book/chapters/javascript-api.md)
