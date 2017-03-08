@@ -7,9 +7,9 @@ webassemblyの薄い本
 
 ## Chapters
 
-* [Intro](https://ukyo.github.io/wasm-usui-book/chapters/intro.md)
-* [Install Tools](https://ukyo.github.io/wasm-usui-book/chapters/install-tools.md)
-* [Get Started](https://ukyo.github.io/wasm-usui-book/chapters/get-started-webassembly.md)
-* [Binery Format](https://ukyo.github.io/wasm-usui-book/chapters/binary-format.md)
-* [Text Format](https://ukyo.github.io/wasm-usui-book/chapters/text-format.md)
-* [JavaScript APIs](https://ukyo.github.io/wasm-usui-book/chapters/javascript-api.md)
+* [Intro](https://ukyo.github.io/wasm-usui-book/chapters/intro)
+* [Install Tools](https://ukyo.github.io/wasm-usui-book/chapters/install-tools)
+* [Get Started](https://ukyo.github.io/wasm-usui-book/chapters/get-started-webassembly)
+* [Binery Format](https://ukyo.github.io/wasm-usui-book/chapters/binary-format)
+* [Text Format](https://ukyo.github.io/wasm-usui-book/chapters/text-format)
+* [JavaScript APIs](https://ukyo.github.io/wasm-usui-book/chapters/javascript-api)
