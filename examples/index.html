@@ -3,12 +3,58 @@
   <head>
     <meta charset="utf-8">
     <title>WebAssembly Examples</title>
+    <style>
+      body {
+        font-size: 14px;
+        color: #494949;
+      }
+
+      pre {
+        font-size: 10px;
+        background-color: #efefef;
+        padding: 10px;
+        font-family: Consolas, 'Courier New', Courier, Monaco, monospace;
+      }
+      
+    </style>
   </head>
   <body>
+    <main id="main"></main>
     <script>
-      function createWasmInstance(path, importObj) {
-        return fetch(path).then(res => res.arrayBuffer()).then(buffer => WebAssembly.instantiate(buffer, importObj));
+      const promises = [
+        "add",
+        "import",
+        "memory",
+        "switch",
+        "table",
+      ].map(name => {
+        return fetch(name + '.was').then(res => res.text()).then(text => `
+          <section>
+            <div>${name}.was <button onclick="load('${name}')">load</button></div>
+            <pre>${text}</pre>
+          </section>
+        `);
+      });
+      Promise.all(promises).then(xs => main.innerHTML = xs.join(''));
+
+      function fatchAndInstantiate(path, importObj) {
+        return fetch(path)
+          .then(res => res.arrayBuffer())
+          .then(buffer => WebAssembly.instantiate(buffer, importObj));
       }
+
+      const importObject = {
+        foo: {
+          print: x => console.log(x)
+        }
+      };
+
+      function load(name) {
+        fatchAndInstantiate(name + ".wasm", importObject).then(obj => {
+          console.log(`${name} module instance was loaded to window.${name}Instance`);
+          window[name + "Instance"] = obj.instance;
+        });
+      };
     </script>
   </body>
 </html>
