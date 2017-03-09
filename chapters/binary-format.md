@@ -1,5 +1,10 @@
 # Binary Format
 
+## 概要図
+
+![wasm module 概要図](../images/wasm-binary.png)
+
+
 ## Data types
 
 ### Numbers
