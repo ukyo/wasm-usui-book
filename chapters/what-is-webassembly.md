@@ -1,6 +1,6 @@
 # WebAssemblyとは
 
-https://developer.mozilla.org/en-US/docs/WebAssembly/Concepts 曰く、
+https://developer.mozilla.org/en-US/docs/WebAssembly/Concepts によると、
 
 > WebAssemblyはモダンなWebブラウザで実行できる新しいタイプのコードで、新しい機能とパフォーマンスの大幅な向上をもたらします。基本的には、手書きではなく、C、C++、Rustなどの低レベルな言語からのコンパイル対象となるように設計されています。
 >
@@ -8,6 +8,18 @@ https://developer.mozilla.org/en-US/docs/WebAssembly/Concepts 曰く、
 > 
 > さらに、WebAssemblyの作成方法を知らなくても恩恵を受けることができます。WebAssemblyモジュールをWeb（またはNode.js）アプリケーションにインポートして、WebAssemblyの関数をJavaScriptから使用することができます。JavaScriptフレームワークではWebAssemblyによってパフォーマンス向上や新機能を提供しながら、Web開発者は簡単に機能を利用することができます。
 
+## 現状できること（Minimum Viable Product）
+
+WebAssemblyは必要最低限の機能（英語だとMinimum Viable Product、以下MVPと記述）だけを持ってリリースされました。大まかにはasm.jsと同等のことができます。具体的には以下のような機能を持っています。
+
+* WebAssemblyモジュールのソースコード（バイナリ）をJS APIを用いてコンパイルし、ブラウザのJS環境上で動かすことができます。
+* 64bit整数やJSにはない低レベルの命令がサポートされています。
+* 変数、関数、線形メモリー、テーブル（参照を要素として持つ型付き配列で、現状は関数だけ）がサポートされています。
+* 上の機能に対してインポート、エクスポートするための仕組みが存在します。
+
+## 将来的な機能
+
+外部ツールの拡充、スレッド、SIMD、GC/DOM/Web APIの統合など、いつ実装されるかわかりませんが夢のある機能が控えています。詳しくは http://webassembly.org/docs/future-features/ を参照してください。
 
 ## バイナリ表現とテキスト表現
 
