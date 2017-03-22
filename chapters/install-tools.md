@@ -21,7 +21,7 @@ $ cd wabt
 $ make
 ```
 
-## Visual Studio Code + vscode-wastインストール
+## Visual Studio Code + vscode-wastのインストール
 
 wastを編集するためのvscode拡張（vscode-wast）を作りましたのでサンプルコードを書くときはVisual Studio Code + vscode-wastを前提として進めていきます。
 
