@@ -34,6 +34,6 @@ WebAssemblyの内容はバイナリで表現されますが、人が読んだり
 
 ![Webブラウザで実行されるまで](../images/use-wasm.png)
 
-[^future features]: [Features to add after the MVP \- WebAssembly](http://webassembly.org/docs/future-features/)
-[^emcc to wasm]: [WebAssembly Standalone · kripken/emscripten Wiki](https://github.com/kripken/emscripten/wiki/WebAssembly-Standalone)
-[^rust to wasm]: [Compiling to the web with Rust and emscripten \- The Rust Programming Language Forum](https://users.rust-lang.org/t/compiling-to-the-web-with-rust-and-emscripten/7627)
+* [^future features]: [Features to add after the MVP \- WebAssembly](http://webassembly.org/docs/future-features/)
+* [^emcc to wasm]: [WebAssembly Standalone · kripken/emscripten Wiki](https://github.com/kripken/emscripten/wiki/WebAssembly-Standalone)
+* [^rust to wasm]: [Compiling to the web with Rust and emscripten \- The Rust Programming Language Forum](https://users.rust-lang.org/t/compiling-to-the-web-with-rust-and-emscripten/7627)
