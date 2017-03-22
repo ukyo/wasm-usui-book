@@ -4,14 +4,14 @@ WebAssemblyを開発、実行、デバッグするための環境を整えます
 
 ## WABT: The WebAssembly Binary Toolkit
 
-WebAssemblyのテキスト表現(以下、wast)からバイナリ表現(以下、wasm)へ変換したり、バイトコードのdumpや詳細情報を可視化したりするツールがcliとして提供されています。"wabbit"と発音するそうです。
+wastからwasmへ変換したり、バイトコードのdumpや詳細情報を可視化したりするツールがコマンドラインツールとして提供されています。ちなみに"wabbit"と発音するそうです。
 
 ツール名 | 説明
 :---|:---
 **wast2wasm** | wastからwasmへ変換する
 **wasm2wast** | wasmからwastへ変換する
 **wasm-interp** | wasmをデコードしてスタックベースのインタプリタで実行する
-**wast-desuger** | 標準化されたインタプリタがサポートするwast(S式、スタックマシン形式、あるいは両方が混在する)をスタックマシン形式へ変換する
+**wast-desuger** | 標準化されたインタプリタがサポートするwast（S式、フラット形式、あるいは両方が混在する）をフラット形式（TODO: 説明しているところへのリンク）形式に変換する
 
 ### インストール
 
@@ -21,15 +21,15 @@ $ cd wabt
 $ make
 ```
 
-## Visual Studio Code + vscode-wastの
+## Visual Studio Code + vscode-wastインストール
 
-wastを編集するためのvscode拡張(vscode-wast)を作りましたのでサンプルコードを書くときはVisual Studio Code + vscode-wastを前提として進めていきます。
+wastを編集するためのvscode拡張（vscode-wast）を作りましたのでサンプルコードを書くときはVisual Studio Code + vscode-wastを前提として進めていきます。
 
-### Visual Studio Codeのインストール
+### Visual Studio Code
 
 https://code.visualstudio.com/ からVisual Studio Code本体をダウンロードしてインストールします。
 
-### vscode-wastのインストール
+### vscode-wast
 
 コマンドパレットを開いて`ext install wast`と入力してEnterを押してしばらく待つとvscode-wastがインストールされます。
 
@@ -43,7 +43,7 @@ https://code.visualstudio.com/ からVisual Studio Code本体をダウンロー�
 
 ### vscode-wastの機能
 
-シンタックスハイライト、エラーチェック(保存時)と各種コマンドが用意されています。
+シンタックスハイライト、保存時のエラーチェックと各種コマンドが用意されています。
 
 ![シンタックスハイライト例](../images/vs-wast-syntax.png)
 
@@ -62,7 +62,7 @@ https://code.visualstudio.com/ からVisual Studio Code本体をダウンロー�
 
 ## Webブラウザ
 
-Chrome 57、Firefox 54以降をインストールしましょう。デフォルトでWebAssemblyが有効になります。どちらも読み込まれたwasmモジュールの可視化、ブレークポイントなどの機能を持っています。試してみた感じ、現状ではFirefoxのほうが情報量が多いようです。
+実行するだけなら、Chrome、FirefoxのStable版で問題なく動作しますが、developer toolsでデバッグする場合は、Chrome Canary、Firefox Nightlyの使用を推奨します。どちらも読み込まれたwasmモジュールの可視化、ブレークポイントなどの機能を持っています。試してみた感じでは、Firefox Nightlyのほうが情報量が多いようです。
 
 ![Chromeでのデバッグ例](../images/wasm-debug-chrome.png)
 
