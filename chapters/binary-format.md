@@ -1,6 +1,6 @@
-# バイナリエンコーディング
+# WebAssembly バイナリ表現
 
-この章ではwasmモジュールのバイナリエンコーディングについて解説します。まずは内部で使用されるデータ型、次にモジュールの構造について見ていきましょう。
+この章ではwasmモジュールのバイナリ表現について解説します。まずは内部で使用されるデータ型、次にモジュールの構造について見ていきます。
 
 ## データ型
 
@@ -658,7 +658,7 @@ Name | Opcode | Immediates | Description
 
 ## 参考
 
-[Binary Encoding \- WebAssembly](http://webassembly.org/docs/binary-encoding/)
-[Introduction to WebAssembly — Rasmus Andersson](https://rsms.me/wasm-intro)
-[LEB128 \- Wikipedia](https://en.wikipedia.org/wiki/LEB128)
-[WebAssembly/spec: Staging ground for artifacts related to an MVP spec](https://github.com/WebAssembly/spec)
+* [Binary Encoding \- WebAssembly](http://webassembly.org/docs/binary-encoding/)
+* [Introduction to WebAssembly — Rasmus Andersson](https://rsms.me/wasm-intro)
+* [LEB128 \- Wikipedia](https://en.wikipedia.org/wiki/LEB128)
+* [WebAssembly/spec: Staging ground for artifacts related to an MVP spec](https://github.com/WebAssembly/spec)
