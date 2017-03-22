@@ -1,0 +1,28 @@
+<html>
+  <head>
+    <title>fib</title>
+  </head>
+  <body>
+    <script>
+      function fib(n) {
+        if (n <= 1) {
+          return n;
+        } else {
+          return fib(n - 1) + fib(n - 2);
+        }
+      }
+      const n = 40;
+      const s = performance.now();
+      console.log('[result]', fib(n), ' [time]', performance.now() - s);
+      fetch('fib.wasm').then(res => res.arrayBuffer()).then(buff => {
+        return WebAssembly.instantiate(buff);
+      }).then(obj => {
+        let s = performance.now();
+        console.log('[result]', obj.instance.exports.fib(n), ' [time]', performance.now() - s);
+        s = performance.now();
+        console.log('[result]', obj.instance.exports.fib_loop(n), ' [time]', performance.now() - s);
+        window.obj = obj;
+      })
+    </script>
+  </body>
+</html>

@@ -1,12 +1,14 @@
-# Text Format
+# WebAssembly テキスト表現
+
+この章ではWebAssemblyのテキスト表現について解説します。基本的にはバイナリ表現と対応していますが、省略記法などの独特の記法もあるので都度解説します。
 
 ## 値の型
 
-`i32`, `i64`, `f32`, `f64` のいづれか。
+`i32`, `i64`, `f32`, `f64`, `anyfunc` のいづれか。関数内では`anyfunc`以外の型が使用されます。
 
 ## コメント
 
-いわゆるコメントです。
+いわゆるコメントです。コメントはソース上無視されます。
 
 ```
 ;; 一行コメント
@@ -18,11 +20,11 @@
 
 ## ラベル
 
-バイナリ表現では他のセクションのエントリーやローカル変数などを参照するときに直接インデックスを指定していましたがラベルを指定(例: `$foo`)することでインデックスの代わりにラベルで参照することができます。
+バイナリ表現では他のセクションのエントリーやローカル変数などを参照するときに直接インデックスを指定していましたが、テキスト表現ではラベルを指定（例: `$foo`、`$1-2-3`）することで、インデックスの代わりにラベルで参照することができます。
 
 ## module
 
-wasm module。1ファイル1moduleです。
+wasmモジュール。1ファイル1モジュール。
 
 ```
 (module
@@ -30,11 +32,11 @@ wasm module。1ファイル1moduleです。
 )
 ```
 
-## Sections
+## セクション
 
 ### type
 
-型宣言をします。
+関数シグネチャーの宣言をします。
 
 ```
 (module
@@ -51,31 +53,33 @@ wasm module。1ファイル1moduleです。
 
 ```
 (module
-  (func)                               ;; 何もしない関数
-  (func $nop)                          ;; ラベル付き
-  (func (param i32))                   ;; i32型の引数を1つ受け取る
-  (func (param i32 i64))               ;; i32型、i64型の引数を受け取る
-  (func (param $x i32))                ;; 引数にラベル付けてみる
-  (func (param $x i32) (param $y i64)) ;; 複数の場合はparamを分けて書く
-  (func (param i32) (result i32)       ;; i32型の引数を1つ受け取り、i32型の値を返す
+  (func)                                          ;; 何もしない関数
+  (func $nop)                                     ;; ラベル付き
+  (func (param i32))                              ;; i32型の引数を1つ受け取る
+  (func (param i32 i64))                          ;; i32型、i64型の引数を受け取る
+  (func (param $x i32))                           ;; 引数にラベル付けてみる
+  (func (param $x i32) (param $y i64))            ;; 複数の場合はparamを分けて書く
+  (func (param i32) (result i32)                  ;; i32型の引数を1つ受け取り、i32型の値を返す
     get_local 0)
   (func (param i32) (result i32)
-    (local i32)                        ;; ローカル変数の宣言
-    (local $a i32)                     ;; ラベル付き
+    (local i32)                                   ;; ローカル変数の宣言
+    (local $a i32)                                ;; ラベル付き
     i32.const 1
     set_local 1
     i32.const 2
     tee_local $a
     get_local 0
     i32.add)
-  (func (type $type1)                  ;; typeを参照する
+  (func (type $type1) (param $x i32) (result i32) ;; typeを参照する
+    get_local $x)
+  (func (type $type1)                             ;; 型の記述は省略できる
     get_local 0)
 )
 ```
 
 ### start
 
-インスタンス化されたときに呼ばれるfuncを指定します。
+インスタンス化が完了したときに呼ばれるfuncを指定します。
 
 ```
 (module
@@ -86,7 +90,7 @@ wasm module。1ファイル1moduleです。
 
 ### table, elem
 
-table(型付き配列)を定義します。elemでtableに要素を挿入します。tableは各moduleに対して1個以下です。
+tableを定義します。elemを用いて対象のオフセットに要素を挿入します。tableは各モジュールに対して1個以下である必要があります。
 
 ```
 (module
@@ -142,7 +146,7 @@ table(型付き配列)を定義します。elemでtableに要素を挿入しま�
 
 ### memory, data
 
-memoryを定義します。moduleに1個まで定義できます。dataでmemoryにバイト値を挿入します。
+memoryを定義します。memoryはモジュールに対して1個以下である必要があります。dataで対象のオフセットにバイト列を挿入します。
 
 ```
 (module (memory 10))                     ;; 10ページ分(10 * 64KB)のメモリー確保
@@ -152,7 +156,7 @@ memoryを定義します。moduleに1個まで定義できます。dataでmemory
   (data (i32.const 0) "abc\01\ffあいう") ;; initializerで指定したoffset(0byte目)からUTF8でエンコーディングされたバイト列としてデータを流し込む
   (data (i32.const 128) "iiiii")         ;; offset(128バイト目)から流し込む
 ) 
-(module (memory (data "abc"))            ;; 略記法、必要な分だけ確保してバイト列を先頭から突っ込む
+(module (memory (data "abc"))            ;; 略記法、必要な分だけ確保してバイト列を先頭から流し込む
 
 ```
 
@@ -170,7 +174,7 @@ memoryを定義します。moduleに1個まで定義できます。dataでmemory
 
 ### import
 
-func, global, memoryまたはtableをインポートします。インポートされたmemory, tableにもmodule内に1個までという制限が適用されます。
+func、global、memoryまたはtableをインポートします。インポートされたmemory、tableにもモジュール内に1個までという制限が適用されます。
 
 ```
 ;; importメインの記法
@@ -190,7 +194,7 @@ func, global, memoryまたはtableをインポートします。インポート�
 )
 ```
 
-以下のようにJavaScript APIからインポートするオブジェクトを設定する。
+以下のように`WebAssembly.instaniate`からインポートするオブジェクトを設定する。
 
 ```js
 const importObject = {
@@ -208,7 +212,7 @@ WebAssembly.instaniate(bufferSource, importObject);
 
 ### export
 
-func, global, memoryまたはtableをエクスポートします。
+func、global、memoryまたはtableをエクスポートします。
 
 ```
 ;; 定義とexportを分けて書く記法
@@ -233,12 +237,12 @@ func, global, memoryまたはtableをエクスポートします。
 )
 ```
 
-エクスポートされたfunc, global, memory, tableはJavaScriptの実行環境上でwasmモジュールのインスタンスから参照できます。
+エクスポートされたfunc、global、memory、tableはJS実行環境上でwasmモジュールのインスタンスから参照できます。
 
 ```js
 WebAssembly.instaniate(bufferSource).then(obj => {
-  obj.instance.exports.f; // exported function
-  obj.instance.exports.x; // 100 イミュータブル
+  obj.instance.exports.f;   // exported function
+  obj.instance.exports.x;   // 100 イミュータブル
   obj.instance.exports.mem; // WebAssembly.Memoryオブジェクト
   obj.instance.exports.tbl; // WebAssembly.Tableオブジェクト
 });
@@ -246,13 +250,13 @@ WebAssembly.instaniate(bufferSource).then(obj => {
 
 ## コード本体
 
-funcのコード本体部分について。WebAssemblyのバイナリ表現ではスタックマシンとして記述されます。テキスト表現においては、スタックマシンか、S式か、または両方を混ぜて記述することができます。
+funcのコード本体部分について。WebAssemblyのバイナリ表現ではスタックマシンとして記述されます。テキスト表現においては、バイトコードをそのままテキストに置き換えたようなフラット形式か、S式、または両方を混ぜて記述することができます。
 
 ### 基本的なオペレータ
 
 wip: binary-formatのhogeを参照。
 
-スタックマシン。スペース区切りで`オペレータ 即値オペランド?`を1セットとして並べるだけです。
+フラット形式。スペース区切りで`opcode immediate*`を1セットとして並べるだけです。
 
 ```
 i32.const 1
@@ -274,7 +278,7 @@ S式。普通にS式で構文木を作るだけです。
 
 #### block
 
-スタックマシン。対となるendオペレータまでをブロックとして扱います。
+フラット形式。対となるendオペレータまでをブロックとして扱います。
 
 ```
 block $foo ;; ブロックにラベルを付けられる。可読性のために付けることを推奨。
@@ -300,11 +304,11 @@ S式の場合はendは書かなくてOKです。
 
 #### loop
 
-blockと同じなので略。
+blockと同じなので省略します。
 
 #### if, else
 
-スタックマシン。
+フラット形式。
 
 ```
 i32.const 1
@@ -347,9 +351,9 @@ S式。真の場合はthen、偽の場合はelseに飛ぶ。
 
 #### br, br_if, br_table
 
-対象のブロックに対する分岐命令。block, ifブロックならブロックを抜ける。loopブロックならブロック先頭に飛ぶ。
+対象のブロックに対する分岐命令。block、ifブロックならブロックを抜ける。loopブロックならブロック先頭に飛ぶ。
 
-スタックマシン。
+フラット形式。
 
 ```
 block $foo
@@ -398,9 +402,9 @@ S式。
 
 ### load, store系オペレータ
 
-load, store系命令でオフセットとアライメントを指定する場合は以下のように記述する。
+load、store系命令でオフセットとアライメントを指定する場合は以下のように記述します。
 
-スタックマシン。
+フラット形式。
 
 ```
 i32.const 1
@@ -420,3 +424,7 @@ S式。
 (i32.load align=4 (i32.const 1))
 (i32.load offset=0 align=4 (i32.const 1))
 ```
+
+## テスト
+
+WIP
