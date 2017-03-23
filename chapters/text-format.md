@@ -24,7 +24,7 @@
 
 ## module
 
-wasmモジュール。1ファイル1モジュール。
+モジュール。wast2wasmでコンパイルする場合、1ファイルに複数のモジュールを定義してもエラーは起きませんが、最初に定義したモジュールがコンパイル結果となります。
 
 ```
 (module
@@ -427,4 +427,25 @@ S式。
 
 ## テスト
 
-WIP
+モジュール自身やエクスポートされた関数をテストすることができます。
+
+### `assert_return`
+
+```
+(module
+  (func (export "add") (param $x i32) (param $y i32) (result i32)
+    get_local $x
+    get_local $y
+    i32.add)
+)
+(assert_return (invoke "add" (i32.const 10) (i32.const 20)) (i32.const 30))
+```
+
+### `assert_return_nan`
+
+### `assert_trap`
+
+### `assert_invalid`
+
+### `assert_exhaustion`
+
