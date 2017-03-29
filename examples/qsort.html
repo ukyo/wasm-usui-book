@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf8">
+    <title>qsort</title>
+  </head>
+  <body>
+    <script>
+      const mem = new WebAssembly.Memory({ initial: 256 });
+      const arr = new Float64Array(mem.buffer);
+
+      // see http://indiegamr.com/generate-repeatable-random-numbers-in-js/
+      // the initial seed
+      Math.seed = 6;
+
+      // in order to work 'Math.seed' must NOT be undefined,
+      // so in any case, you HAVE to provide a Math.seed
+      Math.seededRandom = (max, min) => {
+        max = max || 1;
+        min = min || 0;
+
+        Math.seed = (Math.seed * 9301 + 49297) % 233280;
+        const rnd = Math.seed / 233280;
+
+        return min + rnd * (max - min);
+      };
+
+      function print(x) {
+        console.log(x);
+        return x;
+      }
+
+      function randomizeArray() {
+        Math.seed = 6;
+        arr.forEach((x, i) => arr[i] = Math.seededRandom());
+      }
+
+      function test() {
+        for (let i = 0, n = arr.length - 1; i < n; ++i) {
+          if (arr[i] > arr[i + 1]) {
+            console.log("fail");
+            return;
+          }
+        }
+        console.log("ok");
+      }
+
+      function bench(label, fn) {
+        const t0 = performance.now();
+        fn();
+        const t1 = performance.now();
+        console.log(label, t1 - t0, 'ms');
+        return t1 - t0;
+      }
+
+      function med3(x, y, z) {
+        if (x < y) {
+          if (y < z) return y; else if (z < x) return x; else return z;
+        } else {
+          if (z < y) return y; else if (x < z) return x; else return z;
+        }
+      }
+
+      function _qsort(left, right) {
+        if (left < right) {
+          let i = left, j = right, tmp, pivot = med3(arr[i], arr[j], arr[i + ((j - i) >>> 1)]);
+          while (1) {
+            while (arr[i] < pivot) i++;
+            while (pivot < arr[j]) j--;
+            if (i >= j) break;
+            tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+            i++; j--;
+          }
+          _qsort(left, i - 1);
+          _qsort(j + 1, right);
+        }
+      }
+
+      function qsort(left, right) {
+        return _qsort(left, right - 1);
+      }
+
+      const fn = (a, b) => a - b;
+      randomizeArray();
+      bench('array#sort', () => arr.sort(fn));
+      test();
+
+      randomizeArray();
+      bench('js qsort', () => { qsort(0, arr.length) });
+      test();
+
+      fetch('qsort.wasm').then(res => res.arrayBuffer()).then(buffer => {
+        return WebAssembly.instantiate(buffer, {
+          js: {
+            mem,
+            print_i32: print,
+            print_f64: print
+          }
+        });
+      }).then(({ module, instance }) => {
+        window.instance = instance;
+        const sum = [...new Array(10)].map(() => {
+          randomizeArray();
+          return bench('wasm qsort', () => instance.exports.qsort(0, arr.length));
+        }).reduce((a, b) => a + b);
+        console.log(sum / 10);
+        test();
+      });
+    </script>
+  </body>
+</html>
