@@ -63,8 +63,8 @@ const importObj = {
 fetch("import.wasm")
 .then(res => res.arrayBuffer())
 .then(buffer => WebAssembly.instantiate(buffer, importObj))
-.then(obj => {
-  obj.instance.exports.bar(1); // importObj.foo.printが呼ばれます
+.then(({module, instance}) => {
+  instance.exports.bar(1); // importObj.foo.printが呼ばれます
 });
 ```
 
@@ -124,10 +124,10 @@ fetch("import.wasm")
 fetch("switch.wasm")
 .then(res => res.arrayBuffer())
 .then(buffer => WebAssembly.instantiate(buffer))
-.then(obj => {
-  console.log(obj.instance.exports.switch(0)); // 111
-  console.log(obj.instance.exports.switch(1)); // 222
-  console.log(obj.instance.exports.switch(2)); // 333
+.then(({module, instance}) => {
+  console.log(instance.exports.switch(0)); // 111
+  console.log(instance.exports.switch(1)); // 222
+  console.log(instance.exports.switch(2)); // 333
 });
 ```
 
@@ -158,76 +158,128 @@ fetch("switch.wasm")
 ループを実現するためにはloopブロックを使います。上で定義したfactorial関数をループ版に書き直します。
 
 ```
-wip
+(module
+  (func $factorial_loop (export "factorial_loop") (param $n i32) (result i32)
+    (local $ret i32)
+    i32.const 1
+    set_local $ret
+    block $exit
+      loop $cont
+        get_local $n
+        i32.eqz
+        br_if $exit
+        get_local $ret
+        get_local $n
+        i32.mul
+        set_local $ret
+        get_local $n
+        i32.const 1
+        i32.sub
+        set_local $n
+        br $cont
+      end
+    end
+    get_local $ret)
+)
+```
+
+`loop`と、それに対応する`end`までがloopブロックです。いわゆるwhile文のようなものを実装するときは、`block`と合わせて使うことが多いです。`loop`のすぐ後に出てくる`br_if $exit`で終了判定をし、真なら外側のブロックを抜けます。`loop`に対応する`end`直前の`br $cont`でloopブロックの先頭に飛びます。
+
+## グローバル変数を使ってみる
+
+モジュール内で共通してアクセスできるグローバル変数を定義することができます。実行する度に値をインクリメントする関数を作ってみます。
+
+```
+(module
+  (global $count (mut i32) (i32.const 0))
+
+  (func (export "increment") (result i32)
+    get_global $count
+    i32.const 1
+    i32.add
+    set_global $count
+    get_global)
+)
+```
+
+`(global $count (mut i32) (i32.const 0))`がグローバル変数の定義です。`(mut i32)`は変数のミュータビリティーと型を表します。`(mut hoge)`だとミュータブルになります。イミュータブルにしたい場合は単純に`i32`と書いてください。`(i32.const 0)`は変数のイニシャライザーです。定数や、他のグローバル変数を参照することができます。グローバル変数にアクセスするときは`get_global`、`set_global`を使用します。
+
+```js
+fetch("increment.wasm")
+.then(res => res.arrayBuffer())
+.then(buffer => WebAssembly.instantiate(buffer))
+.then(({module, instance}) => {
+  console.log(instance.exports.increment()); // 1
+  console.log(instance.exports.increment()); // 2
+  console.log(instance.exports.increment()); // 3
+});
 ```
 
 ## 線形メモリーにアクセスしてみる
 
-データの格納場所として線形メモリーを使うことができます。これは生のバイト列なようなもので、ロード、ストア命令によってモジュール内部から線形メモリにアクセスすることができます。
+データの格納場所として線形メモリーを使うことができます。これは生のバイト列のようなもので、ロード、ストア命令によってモジュール内部から線形メモリにアクセスすることができます。以下のsum関数はn個の32bit整数を合計した値を返す関数です。
 
 ```
 (module
-  (memory (export "mem") 1)
-  (func (export "add_each") (param $x i32) (param $offset i32) (param $length i32)
-    (local $ptr i32)
-    (local $end i32)
-    ;; 初期化
-    get_local $offset
-    i32.const 4
-    i32.mul
-    tee_local $ptr
-    get_local $length
-    i32.const 4
-    i32.mul
-    i32.add
-    set_local $end
-    block $break
-      loop $continue
-        ;; ループのブレーク判定
-        get_local $ptr
-        get_local $end
+  (memory (export "mem") 1 2)
+  (data (i32.const 0) "\01\00\00\00\02\00\00\00\03\00\00\00")
+  (func (export "sum") (param $n i32) (result i32)
+    (local $i i32)
+    (local $ret i32)
+    i32.const 0
+    tee_local $ret
+    set_local $i
+    block $exit
+      loop $cont
+        get_local $i
+        get_local $n
         i32.eq
-        br_if $break
-        ;; メモリーの値を更新
-        get_local $ptr
-        get_local $ptr
-        i32.load
-        get_local $x
-        i32.add
-        i32.store
-        ;; インクリメントしてループ先頭に飛ぶ
-        get_local $ptr
+        br_if $exit
+        get_local $i
         i32.const 4
+        i32.mul
+        i32.load
+        get_local $ret
         i32.add
-        set_local $ptr
-        br $continue
+        set_local $ret
+        get_local $i
+        i32.const 1
+        i32.add
+        set_local $i
+        br $cont
       end
-    end)
+    end
+    get_local $ret)
 )
 ```
 
+`(memory (export "mem") 1 2)`がメモリーの定義です。`1 2`はメモリーの初期サイズと最大サイズを表します。メモリーを確保する最小単位は64KBで、つまり、初期サイズは64KB、最大サイズは128KBとなります。メモリーのサイズを拡張する場合は`grow_memory`命令、現在のサイズを取得したい場合は`current_memory`命令を使用します。`(data (i32.const 0) "\01\00\00\00\02\00\00\00\03\00\00\00")`でメモリーの初期化時にデータを書き込みます。`(i32.const 0)`はメモリーのオフセット、`"\01\00\00\00\02\00\00\00\03\00\00\00"`は挿入するバイト列を表します。`i32.load`命令を使用してメモリーからデータを読み込みます。その際、バイトオーダーはリトルエンディアンとして扱われます。
+
 ```js
-fetch("memory.wasm")
+fetch("sum.wasm")
 .then(res => res.arrayBuffer())
 .then(buffer => WebAssembly.instantiate(buffer))
-.then(obj => {
-  const array = new Uint32Array(obj.instance.exports.mem.buffer);
-  obj.instance.exports.add_each(10, 0, 5);
-  console.log(array); // [10, 10, 10, 10, 10, 0, 0, ...]
-  obj.instance.exports.add_each(30, 3, 3);
-  console.log(array); // [10, 10, 10, 40, 40, 30, 0, ...]
+.then(({module, instance}) => {
+  const mem = instance.exports.mem;
+  console.log(mem.buffer.byteLength);                    // 65536
+  const array = new Uint32Array(mem.buffer);
+  console.log(instance.exports.sum(3));                  // 6
+  array.subarray(0, 10).forEach((x, i) => array[i] = i);
+  console.log(instance.exports.sum(10));                 // 45
 });
 ```
 
-## 関数テーブルをつかってみる
+メモリーをエクスポートする場合、`WebAssembly.Memory`のインスタンスとしてエクスポートされます。生データはArrayBufferとして`buffer`プロパティからアクセスすることができます。
 
-関数テーブルで関数を間接参照して呼び出せます。switch文よりは可読性高い。
-テーブルの仕組みはもうちょっと汎用性が高い配列といった感じだが、今のところ関数のみ有効。
+## 関数テーブルを使ってみる
+
+WebAssemblyでは指定した型の要素の参照を持つテーブルを定義できます。現状指定できる型は関数だけで、これは関数テーブルとして利用できます。[switch文的なことをしてみる](#switch文的なことをしてみる)をテーブルを使って書き直します。
 
 ```
 (module
   (type $return_i32 (func (result i32)))
-  (table (export "tbl") anyfunc (elem $f1 $f2 $f3))
+  (table (export "tbl") anyfunc 3 4)
+  (elem (i32.const 0) $f1 $f2 $f3)
 
   (func $f1 (result i32) i32.const 111)
   (func $f2 (result i32) i32.const 222)
@@ -243,15 +295,14 @@ fetch("memory.wasm")
 fetch("table.wasm")
 .then(res => res.arrayBuffer())
 .then(buffer => WebAssembly.instantiate(buffer))
-.then(obj => {
-  console.log(obj.instance.exports.call_indirect(0)); // 111
-  console.log(obj.instance.exports.call_indirect(1)); // 222
-  console.log(obj.instance.exports.call_indirect(2)); // 333
-
-  // エクスポートしたtableはJSから使えるぞ!
-  console.log(obj.instance.exports.tbl.get(0)()); // 111
-  console.log(obj.instance.exports.tbl.get(1)()); // 222
-  console.log(obj.instance.exports.tbl.get(2)()); // 333
+.then(({module, instance}) => {
+  console.log(instance.exports.call_indirect(0)); // 111
+  console.log(instance.exports.call_indirect(1)); // 222
+  console.log(instance.exports.call_indirect(2)); // 333
+  const tbl = instance.exports.tbl;
+  console.log(tbl.get(0)()); // 111
+  console.log(tbl.get(1)()); // 222
+  console.log(tbl.get(2)()); // 333
 });
 ```
 

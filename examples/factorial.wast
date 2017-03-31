@@ -13,3 +13,4 @@
       i32.mul
     end)
 )
+(assert_return (invoke "factorial" (i32.const 5)) (i32.const 120))
