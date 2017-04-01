@@ -9,7 +9,6 @@ webassemblyの薄い本
 
 * [Intro](https://ukyo.github.io/wasm-usui-book/chapters/intro)
 * [What is WebAssembly](https://ukyo.github.io/wasm-usui-book/chapters/what-is-webassembly)
-* [Install Tools](https://ukyo.github.io/wasm-usui-book/chapters/install-tools)
 * [Get Started](https://ukyo.github.io/wasm-usui-book/chapters/get-started-webassembly)
 * [Binery Format](https://ukyo.github.io/wasm-usui-book/chapters/binary-format)
 * [Text Format](https://ukyo.github.io/wasm-usui-book/chapters/text-format)
