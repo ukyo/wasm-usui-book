@@ -39,7 +39,7 @@ WebAssemblyの内容はバイナリで表現されますが、人が読んだり
 
 WebAssemblyのロゴは、色々なものが提案されて、その中から投票によって決定されました。ロゴのライセンスはCC0です。
 
-![WebAssemblyロゴ](../images/web-assembly-log-black.png)
+![WebAssemblyロゴ](../images/web-assembly-logo-black.png)
 
 
 * [^future features]: [Features to add after the MVP \- WebAssembly](http://webassembly.org/docs/future-features/)
