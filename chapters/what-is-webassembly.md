@@ -1,6 +1,6 @@
 # WebAssemblyとは
 
-https://developer.mozilla.org/en-US/docs/WebAssembly/Concepts によると、
+https://developer.mozilla.org/en-US/docs/WebAssembly/Concepts から引用すると、
 
 > WebAssemblyはモダンなWebブラウザで実行できる新しいタイプのコードで、新しい機能とパフォーマンスの大幅な向上をもたらします。基本的には、手書きではなく、C、C++、Rustなどの低レベルな言語からのコンパイル対象となるように設計されています。
 >
@@ -33,6 +33,14 @@ WebAssemblyの内容はバイナリで表現されますが、人が読んだり
 
 
 ![Webブラウザで実行されるまで](../images/use-wasm.png)
+
+
+## ロゴ
+
+WebAssemblyのロゴは、色々なものが提案されて、その中から投票によって決定されました。ロゴのライセンスはCC0です。
+
+![WebAssemblyロゴ](../images/web-assembly-log-black.png)
+
 
 * [^future features]: [Features to add after the MVP \- WebAssembly](http://webassembly.org/docs/future-features/)
 * [^emcc to wasm]: [WebAssembly Standalone · kripken/emscripten Wiki](https://github.com/kripken/emscripten/wiki/WebAssembly-Standalone)
