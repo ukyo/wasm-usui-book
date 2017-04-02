@@ -1,6 +1,6 @@
 # WebAssembly バイナリ表現
 
-この章ではwasmモジュールのバイナリ表現について解説します。まずは内部で使用されるデータ型、次にモジュールの構造について見ていきます。
+この章ではwasmモジュールのバイナリ表現について解説します。まずは内部で使用されるデータ型、次にモジュールの構造について見ていきます。この章の内容は公式の資料を翻訳、補足したものです。
 
 ## データ型
 
@@ -11,24 +11,24 @@
 符号なしの *N* bitの整数値、リトルエンディアンで表現されます。`uint8`、 `uint16`、 `uint32` の3種類が使用されています。
 
 #### `veruintN`
-[LEB128](https://en.wikipedia.org/wiki/LEB128)で表現される *N* bitの符号なし整数。
+[LEB128](https://en.wikipedia.org/wiki/LEB128)で表現される *N* bitの符号なし整数です。
 
 注：現在 `varuint1`, `veruint7`, `varuint32`のみ使用されてます。前者2つは将来的な拡張機能と互換性のために使用されています。
 
 #### `verintN`
-符号付きLEB128で表現される *N* bitの整数。
+符号付きLEB128で表現される *N* bitの整数です。
 
 注：現在 `varint7`, `varint32`, `varint64`が使用されています。
 
-### 命令オペコード（Instruction Opcodes）
+### オペコード（Instruction Opcodes）
 
-MVPでは、命令オペコードの個数はは256以下であるため1バイトで表現されます。将来的にSIMDやアトミック操作の命令を追加すると256を超えるため、拡張スキーマが必要になります。マルチバイトオペコード用に1バイトのプレフィックス値を策定中とのことです。
+MVPでは、オペコードの個数はは256以下であるため1バイトで表現されます。将来的にSIMDやアトミック操作の命令を追加すると256を超えるため、拡張スキーマが必要になります。マルチバイトオペコード用に1バイトのプレフィックス値を策定中とのことです。
 
 ### 言語型（Language Types）
 
 全ての型（型コンストラクタを表す）は先頭の負の`varint7`値によって識別されます。
 
-Opcode(`varint7`値) | Opcode(バイト値)  | Type constructor
+オペコード(`varint7`値) | オペコード(バイト値)  | Type constructor
 :---|:---|:---
 `-0x01`|`0x7f`|`i32`
 `-0x02`|`0x7e`|`i64`
@@ -40,7 +40,7 @@ Opcode(`varint7`値) | Opcode(バイト値)  | Type constructor
 
 この中でいくつかは追加のフィールドが続くものがあります（後述）。
 
-注：:unicorn:将来的な拡張性のために隙間の数値は予約されています。符号付きの数値（つまりここで負の値）を使っているは1バイトでtype sectionへのインデックス（後述）を設定できるようにするためです。型システムの将来的な拡張に関連しています。
+注：将来的な拡張性のために隙間の数値は予約されています。符号付きの数値（つまりここで負の値）を使っているは1バイトでtype sectionへのインデックス（後述）を設定できるようにするためです。型システムの将来的な拡張に関連しています。
 
 #### `value_type`
 値型を表す`varint7`値。`i32`、`i64`、`f32`、`f64`の中の一つです。
@@ -51,12 +51,12 @@ Opcode(`varint7`値) | Opcode(バイト値)  | Type constructor
 #### `elem_type`
 テーブル（後述）中の要素の型を表す`varint7`値。MVPでは`anyfunc`のみ有効です。
 
-注：:unicorn:将来的に他の要素も有効になるでしょう。
+注：将来的に他の要素も有効になるでしょう。
 
 #### `func_type`
 関数シグネチャーを表します。この型コンストラクタには以下の記述が追加されます。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 form | `varint7` | 上の表で定義した`func`型コンストラクタの値
 param_count | varuint32 | 関数のパラメータ数
@@ -64,14 +64,14 @@ param_types | `value_type*` | 関数のパラメータの型(パラメータ数�
 return_count | `varuint1` | 関数の返り値の数
 return_type | `value_type?` | 関数の返り値の型(return_countが1なら)
 
-注：:unicorn:将来的に`return_count`と`return_type`は複数の値を許容するために一般化されるかもしれません。
+注：将来的に`return_count`と`return_type`は複数の値を許容するために一般化されるかもしれません。
 
 ### 他の型（Other Types）
 
 #### `global_type`
 グローバル変数の情報を表します。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 content_type | `value_type` | 値の型
 mutability | `varuint1` | `0`ならイミュータブル。`1`ならミュータブル
@@ -79,7 +79,7 @@ mutability | `varuint1` | `0`ならイミュータブル。`1`ならミュータ
 #### `table_type`
 テーブルの情報を表します。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 element_type | `elem_type` | 要素の型
 limits | `resizable_limits` | 後述
@@ -87,7 +87,7 @@ limits | `resizable_limits` | 後述
 #### `memory_type`
 メモリーの情報を表します。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 limits | `resizable_limits` | 後述
 
@@ -104,13 +104,13 @@ Value | Description
 #### `resizable_limits`
 テーブル、メモリーの初期、最大サイズを表します。テーブルの場合は要素数、メモリーの場合は64KBを1単位とします。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 flags | `varuint1` | maximumフィールドがあるかどうか
 initial | `varuint32` | 初期の長さ
 maximum | `varuint32?` | 最大値（`flags`が`1`ならこのフィールドがある）
 
-注：:unicorn: `flags` フィールドは`varuint32`に変わる可能性があります。例えばスレッド間で共有するためのフラグが含まれたりする。
+注： `flags` フィールドは`varuint32`に変わる可能性があります。例えばスレッド間で共有するためのフラグが含まれたりする。
 
 #### `init_expr`
 イニシャライザー。code section（後述）で用いられている式と`end`オペコードによって構成されます。
@@ -122,26 +122,29 @@ maximum | `varuint32?` | 最大値（`flags`が`1`ならこのフィールドが
 wasmモジュールの現在のプロトタイプです。このフォーマットは[v8-native prototype format](https://docs.google.com/document/d/1-G11CnMA0My20KI9D7dBR6ZCPOBCRD0oCH6SHCPFGx0/edit)を元にして作られています。
 
 ### 高レベル構造（High-level structure）
+
+![wasmモジュール概要図](../images/wasm-binary.png)
+
 モジュールは以下の2つのフィールドから開始します。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 magic number | `uint32` | マジックナンバー `0x6d736100` （`"\0asm"`）
 version | `uint32` | バージョンナンバー（`0x1`）。
 
 モジュールプリアンブルのあとに一連のセクションが続きます。各セクションは既知のセクションまたはカスタムセクションを表す1バイトのセクションコードによって識別されます。そして、セクションの長さ、ペイロードが次に続きます。既知のセクションは非ゼロなidを持ちます。カスタムセクションのidは`0`で、その後にペイロードの一部として識別文字列が続きます。カスタムセクションはWebAssemblyの実装では無視されるので内部でのバリデーションエラーがあってもモジュールが無効になるわけではありません。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 id | `varuint7` | セクションコード
 payload_len | `varuint32` | セクションのバイト長
 name_len | `varuint32?` | セクション名のバイト長。`id == 0`のときだけ存在します
-name | `bytes?` | セクション名の本体。`id == 0`のときだけ存在します
-payload_data | セクションの中身。長さは `payload_len - sizeof(name) - sizeof(name_len)`。
+名前 | `bytes?` | セクション名の本体。`id == 0`のときだけ存在します
+payload_data | セクションの中身。長さは `payload_len - sizeof(名前) - sizeof(name_len)`。
 
 既知のセクションはオプショナルで最大で1個だけです。カスタムセクションは全て同じidを持ちユニークでない名前をつけることができます。以下の表で定義される既知のセクションは順不同で現れない場合もあります。各セクションの`payload_data`にエンコードされた内容が入ります。
 
-Section Name | Code | Description
+セクション名 | コード | 説明
 :---|:---|:---
 Type | `1` | 関数シグネチャー宣言
 Import | `2` | インポート宣言
@@ -157,58 +160,56 @@ Data | `11` | データセグメント
 
 最後のセクションの最終バイトはモジュールの最終バイトと一致する必要があります。最小のモジュールは8バイトです (`magic number`, `version`のあとに何もない状態)。
 
-![wasm module 概要図](../images/wasm-binary.png)
-
 ### Type section
 
 Type sectionでは、モジュールで使用されている全ての関数シグネチャーを宣言します。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 count | `varuint32` | エントリー数
 entries | `func_type*` | 関数シグネチャー列
 
-注：:unicorn:将来的に、他の型を持つエントリーもここに入る可能性があります。`func_type`の`form`フィールドで識別できます。
+注：将来的に、他の型を持つエントリーもここに入る可能性があります。`func_type`の`form`フィールドで識別できます。
 
 ### Import section
 Import sectionではモジュールで使用されている全てのインポートを宣言します。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 count | `varuint32` | エントリー数
 entries | `import_entry*` | import entry（後述）列
 
 #### Import entry
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 module_len | `varuint32` | モジュール文字列の長さ
 module_str | `bytes` | `module_len`バイトのモジュールの文字列
-field_len | `varuint32` | フィールド名の長さ
-field_str | `bytes` | `field_len`バイトのフィールド名
+フィールド_len | `varuint32` | フィールド名の長さ
+フィールド_str | `bytes` | `フィールド_len`バイトのフィールド名
 kind | `external_kind` | インポートされた定義の種類
 
 `kind`の種類によって以下の項目が続きます。`kind`が`Function`の場合は
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 type | `varuint32` | type sectionにある関数シグネチャーのインデックス
 
 `kind`が`Table`の場合は
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 type | `table_type` | インポートされたテーブルの情報
 
 `kind`が`Memory`の場合は
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 type | `memory_type` | インポートされたメモリーの情報
 
 `kind`が`Global`の場合は
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 type | `global_type` | インポートされたグローバル変数の情報
 
@@ -218,7 +219,7 @@ type | `global_type` | インポートされたグローバル変数の情報
 
 Function sectionではモジュール内のすべての関数シグネチャーを宣言します（関数の定義はcode sectionに置かれます）。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 count | `varuint32` | エントリー数
 types | `varuint32*` | type sectionに置いてある対象の`func_type`のインデックス列
@@ -227,7 +228,7 @@ types | `varuint32*` | type sectionに置いてある対象の`func_type`のイ�
 
 Table sectionではモジュール内で使用するテーブル（参照を要素として持つ型付き配列）を定義します。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 count | `varuint32` | モジュールに定義されているテーブルの数
 entries | `table_type*` | `table_type`エントリー列
@@ -238,7 +239,7 @@ entries | `table_type*` | `table_type`エントリー列
 
 Memory sectionではモジュール内で使用する線形メモリーを定義します。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 count | `varuint32` | モジュールで定義されているメモリーの数
 entries | `memory_type*` | `memory_type` エントリー列
@@ -250,7 +251,7 @@ MVPでは、メモリーの数は1以下でなければいけません。
 
 Global sectionではモジュール内で使用するグローバル変数を定義します。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 count | `varuint32` | グローバル変数エントリーの数
 globals | `global_variable*` | 後述のグローバル変数列
@@ -259,7 +260,7 @@ globals | `global_variable*` | 後述のグローバル変数列
 
 各`global_variable`は`global_type`によって型とミュータビリティー、`init_expr`によって初期値が与えられます。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 type | `global_type` | 変数の型
 init | `init_expr` | グローバル変数のイニシャライザー
@@ -270,17 +271,17 @@ init | `init_expr` | グローバル変数のイニシャライザー
 
 Export sectionではモジュール外にエクスポートするエントリーを宣言します。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 count | `varuint32` | エントリー数
 entries | `export_entry*` | 後述のエクスポートエントリー列
 
 #### Export entry
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
-field_len | `varuint32` | フィールド名の長さ
-field_str | `bytes` | `field_len`バイトのフィールド名
+フィールド_len | `varuint32` | フィールド名の長さ
+フィールド_str | `bytes` | `フィールド_len`バイトのフィールド名
 kind | `external_kind` | エクスポートされた定義の種類
 index | `varuint32` | 対応するindex space（後述）へのインデックス
 
@@ -290,7 +291,7 @@ index | `varuint32` | 対応するindex space（後述）へのインデック�
 
 Start sectionではモジュールのインスタンス化が完了したときに呼ばれる関数を宣言します。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 index | `varuint32`|開始する関数のfunction index
 
@@ -298,14 +299,14 @@ index | `varuint32`|開始する関数のfunction index
 
 Element sectionではモジュールをインスタンス化するときに初期値としてテーブルに設定する要素を宣言します。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 count| `varuint32`|エレメントセグメントの数
 entries|`elem_segment*`|後述のエレメントセグメント列
 
 `elem_segment`は以下ような構造を持ちます。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 index| `varuint32`|table index（MVPでは0）
 offset| `init_expr`|要素の場所のオフセットを返すイニシャライザー（`i32`値）
@@ -316,7 +317,7 @@ elems|`varuint32*`|function index列
 
 Code sectionにはモジュール内の全ての関数の本体が含まれています。function sectionで宣言された関数の数と関数本体の定義は必ず一致しなければいけません。`i`番目の関数宣言は`i`番目の関数本体に対応しています。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 count|`varuint32`|`function_body`の数.
 bodies|`function_body*`|関数本体の列（Function bodiesで説明）
@@ -325,30 +326,30 @@ bodies|`function_body*`|関数本体の列（Function bodiesで説明）
 
 Data sectionではモジュールをインスタンス化するときにロードされる初期化データを宣言します。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 count|`varuint32|データセグメントの数
 entries|`data_segment*`|後述のデータセグメント列
 
 `data_segment`は以下のような構造を持ちます。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 index|`varuint32`|線形メモリーのインデックス（MVPでは0）
 offset|`init_expr`|データの場所のオフセットを返すイニシャライザー（`i32`値）
 size|`varuint32`|`data`のバイト数
 data|`bytes`|データ本体
 
-### Name section
+### 名前 section
 
-Name sectionはカスタムセクションの1つです。`name`フィールドに`"name"`が設定されています。全てのカスタムセクション同様、このセクションでのバリデーションエラーは全体のモジュールには影響しません。
-name sectionは（あれば）データセクションのあとに1回だけ現れます。wasmモジュールやその他開発環境で表示する場合、name sectionで定義される関数名やローカル変数名はWebAssemblyのテキスト表現などで使用されることが期待されます。影響しないのでここでは構造についての説明は省略します。
+名前 sectionはカスタムセクションの1つです。`名前`フィールドに`"名前"`が設定されています。全てのカスタムセクション同様、このセクションでのバリデーションエラーは全体のモジュールには影響しません。
+名前 sectionは（あれば）データセクションのあとに1回だけ現れます。wasmモジュールやその他開発環境で表示する場合、名前 sectionで定義される関数名やローカル変数名はWebAssemblyのテキスト表現などで使用されることが期待されます。影響しないのでここでは構造についての説明は省略します。
 
 ## 関数本体（Function Bodies）
 
 関数本体は一連のローカル変数宣言の後にバイトコード命令が続きます。これは構造化されたスタックマシンとみなすことができます。命令はオペコード（Instruction Opcodes参照）と0個以上の即値オペランド（immediates）にエンコードされます。各関数本体は`end`オペコードで終わらなければなりません。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 body_size|`varuint32`|関数本体のバイト数
 local_count|`varuint32`|ローカル変数の数
@@ -360,19 +361,21 @@ end|`byte|`0x0b`、関数本体の終了
 
 各ローカルエントリーは与えられた型のローカル変数リストを宣言します。同じ型のエントリーを複数持つのはokです。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 count |`varuint32`|ローカル変数の数
 type|`value_type`|変数の型
 
+## オペコード一覧
+
+wasmで定義されているオペコードを紹介します。オペコードがオペランドを受け取る場合は基本的にN番目を`opN`とします。
+
 ### Control flow operators
 
-全体的に、オペコードがオペランドを受け取る場合は基本的にN番目を`opN`とします。
-
-Name | Opcode | Immediates | Description
+名前 | オペコード | 即値 | 説明
 :---|:---|:---|:---
 `unreachable`|`0x00`||即例外を発生
-`nop`|`0x01`||なにもしないオペレータ
+`nop`|`0x01`||なにもしないオペコード
 `block`|`0x02`|sig:`block_type`|式のシーケンスを開始して、0個か1個の値をpush
 `loop`|`0x03`|sig:`block_type`|ループできるブロックを作る
 `if`|`0x04`|sig:`block_type`|if式。`op1 != 0`のときブロックに入る
@@ -402,47 +405,47 @@ end
 ```
 
 blockが値をpushしない場合、オペランドを受け取りません。
-blockが値をpushする場合、`op1`をpush。
+blockが値をpushする場合、`op1`をpushします。
 
 #### `br_if`
 
 blockが値をpushしない場合、`op1 != 0` のとき分岐します。
-blockが値をpushする場合、`op2 != 0` のとき分岐して、`op1` をpush。
+blockが値をpushする場合、`op2 != 0` のとき分岐して、`op1` をpushします。
 
 #### `br_table`
 
-`br_table`オペレータは以下のような即値オペランドを持っています。
+`br_table`オペコードは以下のような即値オペランドを持っています。
 
-Field | Type | Description
+フィールド | 型 | 説明
 :---|:---|:---
 target_count | `varuint32` | target_tableのエントリー数
 target_table|`varuint32*`|分岐する対象の親ブロック列
 default_target|`varuint32`|デフォルトで分岐するブロック
 
-ブロックが値を返さない場合、`target_table`の`op1`番目のブロックに対して分岐命令を行います。ブロックが値をpushする場合は`br_if`とかと同様に最初のオペランドがpushされます。入力値が範囲外の場合、`br_table`は`default_target`に指定されているブロックに対して分岐命令を行います。
+ブロックが値をpushしない場合、`target_table`の`op1`番目のブロックに対して分岐命令を行います。ブロックが値をpushする場合は`br_if`などと同様に最初のオペランドがpushされます。入力値が範囲外の場合、`br_table`は`default_target`に指定されているブロックに対して分岐命令を行います。
 
-注：:unicorn:オペコードの開いてる場所は将来のために予約されてます。
+注：オペコードの開いてる場所は将来のために予約されてます。
 
 ### Call operators
 
-Name | Opcode | Immediates | Description
+名前 | オペコード | 即値 | 説明
 :---|:---|:---|:---
 `call`|`0x10`|function_index: `varuint32`| function indexに対応する関数を呼ぶ
 `call_indirect`|`0x11`|type_index: `varuint32`, reserved: `veruint1`| *type_index* の型の関数を間接的に呼ぶ
 
-`call_indirect`は入力として、関数の引数分のオペランド（`type_index`から型を参照して引数の数を決定）+テーブルへのindexを受け取ります。テーブルのindexに置いてある`elem_segment`で指定されているfunction indexから関数を参照して呼び出します。
+`call_indirect`は入力として、関数の引数分のオペランド（`type_index`から型を参照して引数の数を決定）とテーブルへのindexを受け取ります。テーブルのindexに置いてある`elem_segment`で指定されているfunction indexから関数を参照して呼び出します。
 `reserved`は将来的に使うので予約されてます。MVPでは0です。
 
 ### Parametric operators
 
-Name | Opcode | Immediates | Description
+名前 | オペコード | 即値 | 説明
 :---|:---|:---|:---
 `drop`|`0x1a`||スタックの1番上の値をpop
 `select`|`0x1b`|| `op3 != 0 ? op1 : op2`
 
-# Variable access
+### Variable access
 
-Name | Opcode | Immediates | Description
+名前 | オペコード | 即値 | 説明
 :---|:---|:---|:---
 `get_local`|`0x20`|local_index: `varuint32`| local_indexで指定されたローカル変数をスタックにpush
 `set_local`|`0x21`|local_index: `varuint32`| `op1`の値をlocal_indexで指定されたローカル変数にセット
@@ -450,14 +453,11 @@ Name | Opcode | Immediates | Description
 `get_global`|`0x23`|global_index: `varuint32`| global_indexで指定されたグローバル変数をスタックにpush
 `set_global`|`0x24`|global_index: `varuint32`| `op1`の値をglobal_indexで指定されたグローバル変数にセット
 
-注：ローカル変数は関数の引数と内部で定義された変数が含まれます。
+### Memory-related operators
 
-
-# Memory-related operators
-
-Name | Opcode | Immediates | Description
+名前 | オペコード | 即値 | 説明
 :---|:---|:---|:---
-`i32.load`|`0x28`|`memory_immediate`| メモリーのオフセット`op1 + memory_immediate.offset`(後述)から32bit整数のデータを読み込んでスタックにpush
+`i32.load`|`0x28`|`memory_immediate`| メモリーのオフセット`op1 + memory_immediate.offset`（後述）から32bit整数のデータを読み込んでスタックにpush
 `i64.load`|`0x29`|`memory_immediate`| 略
 `f32.load`|`0x2a`|`memory_immediate`| 略
 `f64.load`|`0x2b`|`memory_immediate`| 略
@@ -471,7 +471,7 @@ Name | Opcode | Immediates | Description
 `i64.load16_u`|`0x33`|`memory_immediate`| 略
 `i64.load32_s`|`0x34`|`memory_immediate`| 略
 `i64.load32_u`|`0x35`|`memory_immediate`| 略
-`i32.store`|`0x36`|`memory_immediate`| メモリーのオフセット`op1 + memory_immediate.offset`(後述)に`op2`の値を書き込む
+`i32.store`|`0x36`|`memory_immediate`| メモリーのオフセット`op1 + memory_immediate.offset`（後述）に`op2`の値を書き込む
 `i64.store`|`0x37`|`memory_immediate`| 略
 `f32.store`|`0x38`|`memory_immediate`| 略
 `f64.store`|`0x39`|`memory_immediate`| 略
@@ -485,29 +485,29 @@ Name | Opcode | Immediates | Description
 
 `memory_immediate` は以下のようにエンコードされます。
 
-Name | Type | Description
+名前 | 型 | 説明
 :---|:---|:---
-flags | `varuint32` | フラグ。現在は最下位bitsがアライメントの値として使われている(`log2(alignment)`でエンコードされる)
+flags | `varuint32` | フラグ。現在は最下位bitsがアライメントの値として使われている（`log2(alignment)`でエンコードされる）
 offset | `varuint32` | オフセット値
 
-flagsは`log2(alignment)`でエンコードされるので2の累乗である必要があります。追加のバリデーション基準として、アライメントは自然アライメント以下でないといけません。`log(memory-access-size)`以下のbitsは0である必要があります。これは将来のために予約されてます（例えば、共有メモリーの順序のために必要）。
+flagsは`log2(alignment)`でエンコードされるので2の累乗である必要があります。追加のバリデーション基準として、アライメントは元々のアライメント以下でないといけません。`log(memory-access-size)`より下位のbitsは0である必要があります。これは将来のために予約されてます（例えば、共有メモリーの順序のために必要）。
 
-`current_memory`、`grow_memory`オペレータの`reserved`は将来的に使われる予定です（MVPでは0）。
+`current_memory`、`grow_memory`オペコードの`reserved`は将来的に使われる予定です（MVPでは0）。
 
-## Constants
+### Constants
 
-Name | Opcode | Immediates | Description
+名前 | オペコード | 即値 | 説明
 :---|:---|:---|:---
 `i32.const`|`0x41`|value:`varint32`|`i32`と解釈される定数値をpush
 `i64.const`|`0x42`|value:`varint64`|`i64`と解釈される定数値をpush
 `f32.const`|`0x43`|value:`uint32`|`f32`と解釈される定数値をpush
 `f64.const`|`0x44`|value:`uint64`|`f64`と解釈される定数値をpush
 
-## Comparison operators
+### Comparison operators
 
-真の場合は1、偽の場合は0をpush。
+真の場合は1、偽の場合は0をpushします。
 
-Name | Opcode | Immediates | Description
+名前 | オペコード | 即値 | 説明
 :---|:---|:---|:---
 `i32.eqz`|`0x45`||`op1 == 0`
 `i32.eq`|`0x46`||`op1 == op2`（符号に依存しない）
@@ -544,9 +544,9 @@ Name | Opcode | Immediates | Description
 `f64.le`|`0x65`||`op1 <= op2`
 `f64.ge`|`0x66`||`op1 >= op2`
 
-## Numeric operators
+### Numeric operators
 
-Name | Opcode | Immediates | Description
+名前 | オペコード | 即値 | 説明
 :---|:---|:---|:---
 `i32.clz`|`0x67`||`op1`の値について最上位bitから0が連続する回数（符号に依存しない）
 `i32.ctz`|`0x68`||`op1`の値について最下位bitから0が連続する回数（符号に依存しない）
@@ -613,15 +613,15 @@ Name | Opcode | Immediates | Description
 `f64.max`|`0xa5`||2つの値のうち大きい方をpush。どちらかのオペランドがNaNの場合NaN
 `f64.copysign`|`0xa6`||2つ目の値の符号を1つ目の値にコピーしたものをpush
 
-## Conversions
+### Conversions
 
-型変換系のオペレータ。
+型変換を行います。
 
-`f64.convert_s/i32`命令では最近接偶数へ丸められます。そして、IEEE 754-2008で定義された無限大、負の無限大にオーバーフローする可能性があります。
+`f64.convert_s/i32`では最近接偶数へ丸められます。そして、IEEE 754-2008で定義された無限大、負の無限大にオーバーフローする可能性があります。
 
 浮動小数点数から整数に変換する命令（trunc）の場合、0方向に丸められた整数値となります。オーバーフローするような数値を変換しようとするとエラーとなります。
 
-Name | Opcode | Immediates | Description
+名前 | オペコード | 即値 | 説明
 :---|:---|:---|:---
 `i32.wrap/i64`|`0xa7`||64bit整数を受け取って、それの下位32bitをpush
 `i32.trunc_s/f32`|`0xa8`||32bit浮動小数点数を受け取って、0方向に丸めた32bitの符号付き整数をpush
@@ -645,20 +645,13 @@ Name | Opcode | Immediates | Description
 `f64.convert_u/i64`|`0xba`||64bit整数を64bit浮動小数点数に変換する（符号なしとして）
 `f64.promote/f32`|`0xbb`||32bit浮動小数点数から64bit浮動小数点数に変換
 
-## Reinterpretations
+### Reinterpretations
 
 変換前の数値をただのbit列として扱って変換後の型として再解釈します。
 
-Name | Opcode | Immediates | Description
+名前 | オペコード | 即値 | 説明
 :---|:---|:---|:---
 `i32.reinterpret/f32`|`0xbc`||32bit浮動小数点数を32bit整数として再解釈する
 `i64.reinterpret/f64`|`0xbd`||64bit浮動小数点数を64bit整数として再解釈する
 `f32.reinterpret/i32`|`0xbe`||32bit整数を32bit浮動小数点数として再解釈する
 `f64.reinterpret/i64`|`0xbf`||64bit整数を64bit浮動小数点数として再解釈する
-
-## 参考
-
-* [Binary Encoding \- WebAssembly](http://webassembly.org/docs/binary-encoding/)
-* [Introduction to WebAssembly — Rasmus Andersson](https://rsms.me/wasm-intro)
-* [LEB128 \- Wikipedia](https://en.wikipedia.org/wiki/LEB128)
-* [WebAssembly/spec: Staging ground for artifacts related to an MVP spec](https://github.com/WebAssembly/spec)
