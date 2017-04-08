@@ -35,7 +35,7 @@
       ].map(name => {
         return fetch(name + '.wast').then(res => res.text()).then(text => `
           <section>
-            <div>${name}.was <button onclick="load('${name}')">load</button></div>
+            <div>${name}.wast <button onclick="load('${name}')">load</button></div>
             <pre>${text}</pre>
           </section>
         `);
