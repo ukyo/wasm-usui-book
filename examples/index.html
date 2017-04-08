@@ -23,12 +23,17 @@
     <script>
       const promises = [
         "add",
+        "exports",
+        "factorial",
+        "factorial_loop",
+        "fib",
         "import",
-        "memory",
+        "increment",
+        "sum",
         "switch",
         "table",
       ].map(name => {
-        return fetch(name + '.was').then(res => res.text()).then(text => `
+        return fetch(name + '.wast').then(res => res.text()).then(text => `
           <section>
             <div>${name}.was <button onclick="load('${name}')">load</button></div>
             <pre>${text}</pre>
