@@ -11,6 +11,10 @@ x:p:h1:h2:h3 = 12px:14px:16px:24px:30px
 */
 * {
 }
+html, body {
+  min-height: 100vh;
+  display: flex;
+}
 body {
     margin: 0;
     padding: 0;

@@ -12,4 +12,3 @@ webassemblyの薄い本
 * [Get Started](https://ukyo.github.io/wasm-usui-book/webroot/get-started-webassembly.html)
 * [Binery Format](https://ukyo.github.io/wasm-usui-book/webroot/binary-format.html)
 * [Text Format](https://ukyo.github.io/wasm-usui-book/webroot/text-format.html)
-* [JavaScript APIs](https://ukyo.github.io/wasm-usui-book/webroot/javascript-api.html)
