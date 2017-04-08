@@ -1,0 +1,812 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" type="text/css" href="style.css" />
+<link rel="next" title="WebAssembly テキスト表現" href="text-format.html"><link rel="prev" title="WebAssemblyをはじめよう" href="get-started-webassembly.html">  <meta name="generator" content="Re:VIEW" />
+  <title>WebAssembly バイナリ表現 | WEBASSEMBLY USUI BOOK</title>
+</head>
+<body>
+  <div class="book">
+    <nav class="side-content">
+      <h1>WEBASSEMBLY USUI BOOK</h1>
+      <ul class="book-toc">
+<li><a href="index.html">TOP</a></li>
+<li><a href="./intro.html">まえがき</a></li>
+<li><a href="./what-is-webassembly.html">1 WebAssemblyとは</a></li>
+<li><a href="./get-started-webassembly.html">2 WebAssemblyをはじめよう</a></li>
+<li><a href="./binary-format.html">3 WebAssembly バイナリ表現</a></li>
+<li><a href="./text-format.html">4 WebAssembly テキスト表現</a></li>
+<li><a href="./bib.html">参考文献</a></li>
+</ul>
+      <p class="review-signature">powered by <a href="http://reviewml.org/">Re:VIEW</a></p>
+    </nav>
+    <div class="book-body">
+      <header>
+      </header>
+      <div class="book-page">
+        <h1 id="wasm-encoding"><a id="h3"></a><span class="secno">第3章　</span>WebAssembly バイナリ表現</h1>
+<p></p>
+<p>この章ではwasmモジュールのバイナリ表現について解説します。まずは内部で使用されるデータ型、次にモジュールの構造について見ていきます。この章の内容は公式の資料<a href="bib.html#bib-wasm-bin">[5]</a>を翻訳、補足したものです。</p>
+
+<h2 id="data-type"><a id="h3-1"></a><span class="secno">3.1　</span>データ型</h2>
+
+<h3><a id="h3-1-1"></a><span class="secno">3.1.1　</span>数値（Numbers）</h3>
+
+<h4><a id="h3-1-1-1"></a><code class="tt">uintN</code></h4>
+<p>符号なしの <b>N</b> bitの整数値、リトルエンディアンで表現されます。<code class="tt">uint8</code>、 <code class="tt">uint16</code>、 <code class="tt">uint32</code> の3種類が使用されています。</p>
+
+<h4><a id="h3-1-1-2"></a><code class="tt">veruintN</code></h4>
+<p>LEB128<a href="bib.html#bib-LEB128">[6]</a>で表現される <b>N</b> bitの符号なし整数です。</p>
+<div class="note">
+<p>現在 <code class="tt">varuint1</code>, <code class="tt">veruint7</code>, <code class="tt">varuint32</code>のみ使用されてます。前者2つは将来的な拡張機能と互換性のために使用されています。</p>
+</div>
+
+<h4><a id="h3-1-1-3"></a><code class="tt">verintN</code></h4>
+<p>符号付きLEB128で表現される <b>N</b> bitの整数です。</p>
+<div class="note">
+<p>  現在 <code class="tt">varint7</code>, <code class="tt">varint32</code>, <code class="tt">varint64</code>が使用されています。</p>
+</div>
+
+<h3 id="opcode"><a id="h3-1-2"></a><span class="secno">3.1.2　</span>オペコード（Instruction Opcodes）</h3>
+<p>MVPでは、オペコードの個数はは256以下であるため1バイトで表現されます。将来的にSIMDやアトミック操作の命令を追加すると256を超えるため、拡張スキーマが必要になります。マルチバイトオペコード用に1バイトのプレフィックス値を策定中です。</p>
+
+<h3><a id="h3-1-3"></a><span class="secno">3.1.3　</span>言語型（Language Types）</h3>
+<p>全ての型（型コンストラクタを表す）は先頭の負の<code class="tt">varint7</code>値によって識別されます。</p>
+<div id="tbl1" class="table">
+<p class="caption">表3.1: </p>
+<table>
+<tr><th>オペコード(<code class="tt">varint7</code>値)</th><th>オペコード(バイト値)</th><th>Type constructor</th></tr>
+<tr><td><code class="tt">-0x01</code></td><td><code class="tt">0x7f</code></td><td><code class="tt">i32</code></td></tr>
+<tr><td><code class="tt">-0x02</code></td><td><code class="tt">0x7e</code></td><td><code class="tt">i64</code></td></tr>
+<tr><td><code class="tt">-0x03</code></td><td><code class="tt">0x7d</code></td><td><code class="tt">f32</code></td></tr>
+<tr><td><code class="tt">-0x04</code></td><td><code class="tt">0x7c</code></td><td><code class="tt">f64</code></td></tr>
+<tr><td><code class="tt">-0x10</code></td><td><code class="tt">0x70</code></td><td><code class="tt">anyfunc</code></td></tr>
+<tr><td><code class="tt">-0x20</code></td><td><code class="tt">0x60</code></td><td><code class="tt">func</code></td></tr>
+<tr><td><code class="tt">-0x40</code></td><td><code class="tt">0x40</code></td><td>空の<code class="tt">block_type</code>を表現する擬似的な型</td></tr>
+</table>
+</div>
+<p>この中でいくつかは追加のフィールドが続くものがあります（後述）。</p>
+<div class="note">
+<p>  将来的な拡張性のために隙間の数値は予約されています。符号付きの数値（つまりここで負の値）を使っているは1バイトでtype sectionへのインデックス（後述）を設定できるようにするためです。型システムの将来的な拡張に関連しています。</p>
+</div>
+
+<h4><a id="h3-1-3-1"></a><code class="tt">value_type</code></h4>
+<p>値型を表す<code class="tt">varint7</code>値。<code class="tt">i32</code>、<code class="tt">i64</code>、<code class="tt">f32</code>、<code class="tt">f64</code>の中の一つです。</p>
+
+<h4><a id="h3-1-3-2"></a><code class="tt">block_type</code></h4>
+<p>ブロック（後述）が返す型を表す<code class="tt">varint7</code>値。ブロックが値を返す場合は<code class="tt">value_type</code>、何も返さない場合は<code class="tt">-0x40</code>が設定されます。</p>
+
+<h4><a id="h3-1-3-3"></a><code class="tt">elem_type</code></h4>
+<p>テーブル（後述）中の要素の型を表す<code class="tt">varint7</code>値。MVPでは<code class="tt">anyfunc</code>のみ有効です。</p>
+<div class="note">
+<p>  将来的に他の要素も有効になる可能性があります。</p>
+</div>
+
+<h4><a id="h3-1-3-4"></a><code class="tt">func_type</code></h4>
+<p>関数シグネチャーを表します。この型コンストラクタには以下の記述が追加されます。</p>
+<div id="tbl2" class="table">
+<p class="caption">表3.2: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>form</td><td><code class="tt">varint7</code></td><td>上の表で定義した<code class="tt">func</code>型コンストラクタの値</td></tr>
+<tr><td>param_count</td><td>varuint32</td><td>関数のパラメータ数</td></tr>
+<tr><td>param_types</td><td><code class="tt">value_type*</code></td><td>関数のパラメータの型(パラメータ数だけ用意)</td></tr>
+<tr><td>return_count</td><td><code class="tt">varuint1</code></td><td>関数の返り値の数</td></tr>
+<tr><td>return_type</td><td><code class="tt">value_type?</code></td><td>関数の返り値の型(return_countが1なら)</td></tr>
+</table>
+</div>
+<div class="note">
+<p>  将来的に<code class="tt">return_count</code>と<code class="tt">return_type</code>は複数の値を許容するために一般化されるかもしれません。</p>
+</div>
+
+<h3><a id="h3-1-4"></a><span class="secno">3.1.4　</span>他の型（Other Types）</h3>
+
+<h4><a id="h3-1-4-1"></a><code class="tt">global_type</code></h4>
+<p>グローバル変数の情報を表します。</p>
+<div id="tbl3" class="table">
+<p class="caption">表3.3: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>content_type</td><td><code class="tt">value_type</code></td><td>値の型</td></tr>
+<tr><td>mutability</td><td><code class="tt">varuint1</code></td><td><code class="tt">0</code>ならイミュータブル。<code class="tt">1</code>ならミュータブル</td></tr>
+</table>
+</div>
+
+<h4><a id="h3-1-4-2"></a><code class="tt">table_type</code></h4>
+<p>テーブルの情報を表します。</p>
+<div id="tbl4" class="table">
+<p class="caption">表3.4: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>element_type</td><td><code class="tt">elem_type</code></td><td>要素の型</td></tr>
+<tr><td>limits</td><td><code class="tt">resizable_limits</code></td><td>後述</td></tr>
+</table>
+</div>
+
+<h4><a id="h3-1-4-3"></a><code class="tt">memory_type</code></h4>
+<p>メモリーの情報を表します。</p>
+<div id="tbl5" class="table">
+<p class="caption">表3.5: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>limits</td><td><code class="tt">resizable_limits</code></td><td>後述</td></tr>
+</table>
+</div>
+
+<h4><a id="h3-1-4-4"></a><code class="tt">external_kind</code></h4>
+<p>インポートまたはモジュール内で定義された定義の種類を表す1バイトの符号なし整数値。</p>
+<div id="tbl6" class="table">
+<p class="caption">表3.6: </p>
+<table>
+<tr><th>Value</th><th>Description</th></tr>
+<tr><td><code class="tt">0</code></td><td>インポートまたはモジュール内で定義された <code class="tt">Function</code></td></tr>
+<tr><td><code class="tt">1</code></td><td>インポートまたはモジュール内で定義された <code class="tt">Table</code></td></tr>
+<tr><td><code class="tt">2</code></td><td>インポートまたはモジュール内で定義された <code class="tt">Memory</code></td></tr>
+<tr><td><code class="tt">3</code></td><td>インポートまたはモジュール内で定義された <code class="tt">Global</code></td></tr>
+</table>
+</div>
+
+<h4><a id="h3-1-4-5"></a><code class="tt">resizable_limits</code></h4>
+<p>テーブル、メモリーの初期、最大サイズを表します。テーブルの場合は要素数、メモリーの場合は64KBを1単位とします。</p>
+<div id="tbl7" class="table">
+<p class="caption">表3.7: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>flags</td><td><code class="tt">varuint1</code></td><td>maximumフィールドがあるかどうか</td></tr>
+<tr><td>initial</td><td><code class="tt">varuint32</code></td><td>初期の長さ</td></tr>
+<tr><td>maximum</td><td><code class="tt">varuint32?</code></td><td>最大値（<code class="tt">flags</code>が<code class="tt">1</code>ならこのフィールドがある）</td></tr>
+</table>
+</div>
+<div class="note">
+<p>  <code class="tt">flags</code> フィールドは<code class="tt">varuint32</code>に変わる可能性があります。例えばスレッド間で共有するためのフラグが含まれたりする。</p>
+</div>
+
+<h4><a id="h3-1-4-6"></a><code class="tt">init_expr</code></h4>
+<p>イニシャライザー。code section（後述）で用いられている式と<code class="tt">end</code>オペコードによって構成されます。</p>
+<div class="note">
+<p>  イニシャライザーに含まれる<code class="tt">get_global</code>はインポートされたイミュータブルなグローバル変数のみ参照でき、全ての<code class="tt">init_expr</code>はimport sectionの後でのみ使用できます。</p>
+</div>
+<p></p>
+
+<h2><a id="h3-2"></a><span class="secno">3.2　</span>モジュール構造（Module structure）</h2>
+<p>WebAssemblyモジュールの高レベルな構造（セクションの集合）と各セクションについて解説します。wast2wasmでモジュールの詳細情報を確認できるので、合わせて見てもらえると理解の助けになると思われます。</p>
+<div class="cmd-code">
+<pre class="cmd">$ wast2wasm -v add.wast
+</pre>
+</div>
+<div id="wasm-info" class="image">
+<img src="images/wasm-info.png" alt="wast2wasm -v の実行例" class="width-070per" />
+<p class="caption">
+図3.1: wast2wasm -v の実行例
+</p>
+</div>
+
+<h3><a id="h3-2-1"></a><span class="secno">3.2.1　</span>高レベルな構造（High-level structure）</h3>
+<div id="wasm-binary" class="image">
+<img src="images/wasm-binary.png" alt="wasmモジュール概要図" />
+<p class="caption">
+図3.2: wasmモジュール概要図
+</p>
+</div>
+<p>モジュールは以下の2つのフィールドから開始します。</p>
+<div id="tbl8" class="table">
+<p class="caption">表3.8: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>magic number</td><td><code class="tt">uint32</code></td><td>マジックナンバー <code class="tt">0x6d736100</code> （<code class="tt">&quot;\0asm&quot;</code>）</td></tr>
+<tr><td>version</td><td><code class="tt">uint32</code></td><td>バージョンナンバー（<code class="tt">0x1</code>）</td></tr>
+</table>
+</div>
+<p>モジュールプリアンブルのあとに一連のセクションが続きます。各セクションは既知のセクションまたはカスタムセクションを表す1バイトのセクションコードによって識別されます。そして、セクションの長さ、ペイロードが次に続きます。既知のセクションは非ゼロなidを持ちます。カスタムセクションのidは<code class="tt">0</code>で、その後にペイロードの一部として識別文字列が続きます。カスタムセクションはWebAssemblyの実装では無視されるので内部でのバリデーションエラーがあってもモジュールが無効になるわけではありません。</p>
+<div id="tbl9" class="table">
+<p class="caption">表3.9: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>id</td><td><code class="tt">varuint7</code></td><td>セクションコード</td></tr>
+<tr><td>payload_len</td><td><code class="tt">varuint32</code></td><td>セクションのバイト長</td></tr>
+<tr><td>name_len</td><td><code class="tt">varuint32?</code></td><td>セクション名のバイト長。<code class="tt">id == 0</code>のときだけ存在します</td></tr>
+<tr><td>name</td><td><code class="tt">bytes?</code></td><td>セクション名の本体。<code class="tt">id == 0</code>のときだけ存在します</td></tr>
+<tr><td>payload_data</td><td>セクションの中身。長さは <code class="tt">payload_len - sizeof(name) - sizeof(name_len)</code></td><td></td></tr>
+</table>
+</div>
+<p>既知のセクションはオプショナルで最大で1個だけです。カスタムセクションは全て同じidを持ちユニークでない名前をつけることができます。以下の表で定義される既知のセクションは順不同で現れない場合もあります。各セクションの<code class="tt">payload_data</code>にエンコードされた内容が入ります。</p>
+<div id="tbl10" class="table">
+<p class="caption">表3.10: </p>
+<table>
+<tr><th>セクション名</th><th>コード</th><th>説明</th></tr>
+<tr><td>Type</td><td><code class="tt">1</code></td><td>関数シグネチャー宣言</td></tr>
+<tr><td>Import</td><td><code class="tt">2</code></td><td>インポート宣言</td></tr>
+<tr><td>Function</td><td><code class="tt">3</code></td><td>関数宣言</td></tr>
+<tr><td>Table</td><td><code class="tt">4</code></td><td>間接的な関数テーブルと他のテーブル</td></tr>
+<tr><td>Memory</td><td><code class="tt">5</code></td><td>メモリー属性</td></tr>
+<tr><td>Global</td><td><code class="tt">6</code></td><td>グローバル宣言</td></tr>
+<tr><td>Export</td><td><code class="tt">7</code></td><td>エクスポート</td></tr>
+<tr><td>Start</td><td><code class="tt">8</code></td><td>開始関数宣言</td></tr>
+<tr><td>Element</td><td><code class="tt">9</code></td><td>要素セクション</td></tr>
+<tr><td>Code</td><td><code class="tt">10</code></td><td>関数本体（code）</td></tr>
+<tr><td>Data</td><td><code class="tt">11</code></td><td>データセグメント</td></tr>
+</table>
+</div>
+<p>最後のセクションの最終バイトはモジュールの最終バイトと一致する必要があります。最小のモジュールは8バイトです（<code class="tt">magic number</code>, <code class="tt">version</code>のあとに何もない状態）。</p>
+
+<h3><a id="h3-2-2"></a><span class="secno">3.2.2　</span>Type section</h3>
+<p>Type sectionでは、モジュールで使用されている全ての関数シグネチャーを宣言します。</p>
+<div id="tbl11" class="table">
+<p class="caption">表3.11: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>count</td><td><code class="tt">varuint32</code></td><td>エントリー数</td></tr>
+<tr><td>entries</td><td><code class="tt">func_type*</code></td><td>関数シグネチャー列</td></tr>
+</table>
+</div>
+<div class="note">
+<p>  将来的に、他の型を持つエントリーもここに入る可能性があります。<code class="tt">func_type</code>の<code class="tt">form</code>フィールドで識別できます。</p>
+</div>
+
+<h3><a id="h3-2-3"></a><span class="secno">3.2.3　</span>Import section</h3>
+<p>Import sectionではモジュールで使用されている全てのインポートを宣言します。</p>
+<div id="tbl12" class="table">
+<p class="caption">表3.12: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>count</td><td><code class="tt">varuint32</code></td><td>エントリー数</td></tr>
+<tr><td>entries</td><td><code class="tt">import_entry*</code></td><td>import entry（後述）列</td></tr>
+</table>
+</div>
+<p>各<code class="tt">import_entry</code>は以下のような構造を持ちます。</p>
+<div id="tbl13" class="table">
+<p class="caption">表3.13: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>module_len</td><td><code class="tt">varuint32</code></td><td>モジュール文字列の長さ</td></tr>
+<tr><td>module_str</td><td><code class="tt">bytes</code></td><td><code class="tt">module_len</code>バイトのモジュールの文字列</td></tr>
+<tr><td>フィールド_len</td><td><code class="tt">varuint32</code></td><td>フィールド名の長さ</td></tr>
+<tr><td>フィールド_str</td><td><code class="tt">bytes</code></td><td><code class="tt">フィールド_len</code>バイトのフィールド名</td></tr>
+<tr><td>kind</td><td><code class="tt">external_kind</code></td><td>インポートされた定義の種類</td></tr>
+</table>
+</div>
+<p><code class="tt">kind</code>の種類によって以下の項目が続きます。<code class="tt">kind</code>が<code class="tt">Function</code>の場合は</p>
+<div id="tbl14" class="table">
+<p class="caption">表3.14: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>type</td><td><code class="tt">varuint32</code></td><td>type sectionにある関数シグネチャーのインデックス</td></tr>
+</table>
+</div>
+<p><code class="tt">kind</code>が<code class="tt">Table</code>の場合は</p>
+<div id="tbl15" class="table">
+<p class="caption">表3.15: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>type</td><td><code class="tt">table_type</code></td><td>インポートされたテーブルの情報</td></tr>
+</table>
+</div>
+<p><code class="tt">kind</code>が<code class="tt">Memory</code>の場合は</p>
+<div id="tbl16" class="table">
+<p class="caption">表3.16: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>type</td><td><code class="tt">memory_type</code></td><td>インポートされたメモリーの情報</td></tr>
+</table>
+</div>
+<p><code class="tt">kind</code>が<code class="tt">Global</code>の場合は</p>
+<div id="tbl17" class="table">
+<p class="caption">表3.17: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>type</td><td><code class="tt">global_type</code></td><td>インポートされたグローバル変数の情報</td></tr>
+</table>
+</div>
+<div class="note">
+<p>  MVPではイミュータブルなグローバル変数のみインポートできます。</p>
+</div>
+
+<h3><a id="h3-2-4"></a><span class="secno">3.2.4　</span>Function section</h3>
+<p>Function sectionではモジュール内のすべての関数シグネチャーを宣言します（関数の定義はcode sectionに置かれます）。</p>
+<div id="tbl18" class="table">
+<p class="caption">表3.18: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>count</td><td><code class="tt">varuint32</code></td><td>エントリー数</td></tr>
+<tr><td>types</td><td><code class="tt">varuint32*</code></td><td>type sectionに置いてある対象の<code class="tt">func_type</code>のインデックス列</td></tr>
+</table>
+</div>
+
+<h3><a id="h3-2-5"></a><span class="secno">3.2.5　</span>Table section</h3>
+<p>Table sectionではモジュール内で使用するテーブル（参照を要素として持つ型付き配列）を定義します。</p>
+<div id="tbl19" class="table">
+<p class="caption">表3.19: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>count</td><td><code class="tt">varuint32</code></td><td>モジュールに定義されているテーブルの数</td></tr>
+<tr><td>entries</td><td><code class="tt">table_type*</code></td><td><code class="tt">table_type</code>エントリー列</td></tr>
+</table>
+</div>
+<div class="note">
+<p>  MVPでは、テーブルの数は1以下でなければいけません。<code class="tt">table_type</code>で使用できる型は<code class="tt">anyfunc</code>だけで、関数テーブルとして機能します。</p>
+</div>
+
+<h3><a id="h3-2-6"></a><span class="secno">3.2.6　</span>Memory section</h3>
+<p>Memory sectionではモジュール内で使用する線形メモリーを定義します。</p>
+<div id="tbl20" class="table">
+<p class="caption">表3.20: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>count</td><td><code class="tt">varuint32</code></td><td>モジュールで定義されているメモリーの数</td></tr>
+<tr><td>entries</td><td><code class="tt">memory_type*</code></td><td><code class="tt">memory_type</code> エントリー列</td></tr>
+</table>
+</div>
+<div class="note">
+<p>MVPでは、メモリーの数は1以下でなければいけません。</p>
+</div>
+
+<h3><a id="h3-2-7"></a><span class="secno">3.2.7　</span>Global section</h3>
+<p>Global sectionではモジュール内で使用するグローバル変数を定義します。</p>
+<div id="tbl21" class="table">
+<p class="caption">表3.21: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>count</td><td><code class="tt">varuint32</code></td><td>グローバル変数エントリーの数</td></tr>
+<tr><td>globals</td><td><code class="tt">global_variable*</code></td><td>後述のグローバル変数列</td></tr>
+</table>
+</div>
+<p>各<code class="tt">global_variable</code>は以下のような構造を持ちます。</p>
+<div id="tbl22" class="table">
+<p class="caption">表3.22: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>type</td><td><code class="tt">global_type</code></td><td>変数の型</td></tr>
+<tr><td>init</td><td><code class="tt">init_expr</code></td><td>グローバル変数のイニシャライザー</td></tr>
+</table>
+</div>
+<p><code class="tt">global_type</code>によって型とミュータビリティー、<code class="tt">init_expr</code>によって初期値が与えられます。</p>
+<div class="note">
+<p>  MVPではイミュータブルなグローバル変数だけエクスポートできます。</p>
+</div>
+
+<h3><a id="h3-2-8"></a><span class="secno">3.2.8　</span>Export section</h3>
+<p>Export sectionではモジュール外にエクスポートするエントリーを宣言します。</p>
+<div id="tbl23" class="table">
+<p class="caption">表3.23: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>count</td><td><code class="tt">varuint32</code></td><td>エントリー数</td></tr>
+<tr><td>entries</td><td><code class="tt">export_entry*</code></td><td>後述のエクスポートエントリー列</td></tr>
+</table>
+</div>
+<p><code class="tt">export_entry</code>は以下のような構造を持ちます。</p>
+<div id="tbl24" class="table">
+<p class="caption">表3.24: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>フィールド_len</td><td><code class="tt">varuint32</code></td><td>フィールド名の長さ</td></tr>
+<tr><td>フィールド_str</td><td><code class="tt">bytes</code></td><td><code class="tt">フィールド_len</code>バイトのフィールド名</td></tr>
+<tr><td>kind</td><td><code class="tt">external_kind</code></td><td>エクスポートされた定義の種類</td></tr>
+<tr><td>index</td><td><code class="tt">varuint32</code></td><td>対応するindex space（後述）へのインデックス</td></tr>
+</table>
+</div>
+<p>例えば、<code class="tt">kind</code>が<code class="tt">Function</code>のときはindexはfunction section中でのインデックス(function index)になります。MVPではメモリ、テーブルは0だけです。</p>
+
+<h3><a id="h3-2-9"></a><span class="secno">3.2.9　</span>Start section</h3>
+<p>Start sectionではモジュールのインスタンス化が完了したときに呼ばれる関数を宣言します。</p>
+<div id="tbl25" class="table">
+<p class="caption">表3.25: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>index</td><td><code class="tt">varuint32</code></td><td>開始する関数のfunction index</td></tr>
+</table>
+</div>
+
+<h3><a id="h3-2-10"></a><span class="secno">3.2.10　</span>Element section</h3>
+<p>Element sectionではモジュールをインスタンス化するときに初期値としてテーブルに設定する要素を宣言します。</p>
+<div id="tbl26" class="table">
+<p class="caption">表3.26: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>count</td><td><code class="tt">varuint32</code></td><td>エレメントセグメントの数</td></tr>
+<tr><td>entries</td><td><code class="tt">elem_segment*</code></td><td>後述のエレメントセグメント列</td></tr>
+</table>
+</div>
+<p><code class="tt">elem_segment</code>は以下ような構造を持ちます。</p>
+<div id="tbl27" class="table">
+<p class="caption">表3.27: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>index</td><td><code class="tt">varuint32</code></td><td>table index（MVPでは0）</td></tr>
+<tr><td>offset</td><td><code class="tt">init_expr</code></td><td>要素の場所のオフセットを返すイニシャライザー（<code class="tt">i32</code>値）</td></tr>
+<tr><td>num_elem</td><td><code class="tt">varuint32</code></td><td>要素数</td></tr>
+<tr><td>elems</td><td><code class="tt">varuint32*</code></td><td>function index列</td></tr>
+</table>
+</div>
+
+<h3><a id="h3-2-11"></a><span class="secno">3.2.11　</span>Code section</h3>
+<p>Code sectionにはモジュール内の全ての関数の本体が含まれています。function sectionで宣言された関数の数と関数本体の定義は必ず一致しなければいけません。<code class="tt">i</code>番目の関数宣言は<code class="tt">i</code>番目の関数本体に対応しています。</p>
+<div id="tbl28" class="table">
+<p class="caption">表3.28: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>count</td><td><code class="tt">varuint32</code></td><td><code class="tt">function_body</code>の数</td></tr>
+<tr><td>bodies</td><td><code class="tt">function_body*</code></td><td>関数本体の列（Function bodiesで説明）</td></tr>
+</table>
+</div>
+
+<h3><a id="h3-2-12"></a><span class="secno">3.2.12　</span>Data section</h3>
+<p>Data sectionではモジュールをインスタンス化するときにロードされる初期化データを宣言します。</p>
+<div id="tbl29" class="table">
+<p class="caption">表3.29: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>count</td><td><code class="tt">varuint32</code></td><td>データセグメントの数</td></tr>
+<tr><td>entries</td><td><code class="tt">data_segment*</code></td><td>後述のデータセグメント列</td></tr>
+</table>
+</div>
+<p><code class="tt">data_segment</code>は以下のような構造を持ちます。</p>
+<div id="tbl30" class="table">
+<p class="caption">表3.30: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>index</td><td><code class="tt">varuint32</code></td><td>線形メモリーのインデックス（MVPでは0）</td></tr>
+<tr><td>offset</td><td><code class="tt">init_expr</code></td><td>データの場所のオフセットを返すイニシャライザー（<code class="tt">i32</code>値）</td></tr>
+<tr><td>size</td><td><code class="tt">varuint32</code></td><td><code class="tt">data</code>のバイト数</td></tr>
+<tr><td>data</td><td><code class="tt">bytes</code></td><td>データ本体</td></tr>
+</table>
+</div>
+
+<h3><a id="h3-2-13"></a><span class="secno">3.2.13　</span>Name section</h3>
+<p>Name sectionはカスタムセクションの1つです。<code class="tt">name</code>フィールドに<code class="tt">&quot;name&quot;</code>が設定されています。全てのカスタムセクション同様、このセクションでのバリデーションエラーは全体のモジュールには影響しません。Name sectionは（あれば）データセクションのあとに1回だけ現れます。wasmモジュールやその他、開発環境で表示する場合、Name sectionで定義される関数名やローカル変数名はWebAssemblyのテキスト表現などで使用されることが期待されます。影響しないのでここでは構造についての説明は省略します。</p>
+
+<h2><a id="h3-3"></a><span class="secno">3.3　</span>関数本体（Function Bodies）</h2>
+<p>関数本体は一連のローカル変数宣言の後にバイトコード命令が続きます。これは構造化されたスタックマシンの命令列とみなすことができます。命令はオペコードと0個以上の即値オペランド（immediates）にエンコードされます。各関数本体は<code class="tt">end</code>オペコードで終わらなければなりません。</p>
+<div id="tbl31" class="table">
+<p class="caption">表3.31: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>body_size</td><td><code class="tt">varuint32</code></td><td>関数本体のバイト数</td></tr>
+<tr><td>local_count</td><td><code class="tt">varuint32</code></td><td>ローカル変数の数</td></tr>
+<tr><td>locals</td><td><code class="tt">local_entry</code></td><td>ローカル変数列</td></tr>
+<tr><td>code</td><td><code class="tt">byte*</code></td><td>関数のバイトコード</td></tr>
+<tr><td>end</td><td>`byte</td><td><code class="tt">0x0b</code>、関数本体の終了</td></tr>
+</table>
+</div>
+
+<h3><a id="h3-3-1"></a><span class="secno">3.3.1　</span>Local entry</h3>
+<p>各ローカルエントリーは与えられた型のローカル変数リストを宣言します。同じ型のエントリーを複数持つことができます。</p>
+<div id="tbl32" class="table">
+<p class="caption">表3.32: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>count</td><td><code class="tt">varuint32</code></td><td>ローカル変数の数</td></tr>
+<tr><td>type</td><td><code class="tt">value_type</code></td><td>変数の型</td></tr>
+</table>
+</div>
+
+<h2><a id="h3-4"></a><span class="secno">3.4　</span>オペコード一覧</h2>
+<p>wasmで定義されているオペコードを紹介します。オペコードがオペランドを受け取る場合はN番目のオペランドを<code class="tt">opN</code>とします。</p>
+
+<h3><a id="h3-4-1"></a><span class="secno">3.4.1　</span>Control flow operators</h3>
+<div id="tbl33" class="table">
+<p class="caption">表3.33: </p>
+<table>
+<tr><th>名前</th><th>オペコード</th><th>即値</th><th>説明</th></tr>
+<tr><td><code class="tt">unreachable</code></td><td><code class="tt">0x00</code></td><td></td><td>即例外を発生</td></tr>
+<tr><td><code class="tt">nop</code></td><td><code class="tt">0x01</code></td><td></td><td>なにもしないオペコード</td></tr>
+<tr><td><code class="tt">block</code></td><td><code class="tt">0x02</code></td><td>sig:<code class="tt">block_type</code></td><td>式のシーケンスを開始して、0個か1個の値をpush</td></tr>
+<tr><td><code class="tt">loop</code></td><td><code class="tt">0x03</code></td><td>sig:<code class="tt">block_type</code></td><td>ループできるブロックを作る</td></tr>
+<tr><td><code class="tt">if</code></td><td><code class="tt">0x04</code></td><td>sig:<code class="tt">block_type</code></td><td>if式。<code class="tt">op1 != 0</code>のときブロックに入る</td></tr>
+<tr><td><code class="tt">else</code></td><td><code class="tt">0x05</code></td><td></td><td>ifに対応するelse式</td></tr>
+<tr><td><code class="tt">end</code></td><td><code class="tt">0x0b</code></td><td></td><td><code class="tt">block</code>、<code class="tt">if</code>、<code class="tt">loop</code>の終了</td></tr>
+<tr><td><code class="tt">br</code></td><td><code class="tt">0x0c</code></td><td>relative_depth:<code class="tt">varuint32</code></td><td>対象の親ブロックに対して分岐命令を行う（以下補足）</td></tr>
+<tr><td><code class="tt">br_if</code></td><td><code class="tt">0x0d</code></td><td>relative_depth:<code class="tt">varuint32</code></td><td><code class="tt">br</code>の条件分岐あり版(以下補足)</td></tr>
+<tr><td><code class="tt">br_table</code></td><td><code class="tt">0x0e</code></td><td>後述</td><td>後述</td></tr>
+<tr><td><code class="tt">return</code></td><td><code class="tt">0x0f</code></td><td></td><td>関数から0個か1個の値を返す</td></tr>
+</table>
+</div>
+
+<h4><a id="h3-4-1-1"></a>分岐命令について</h4>
+<p><code class="tt">br</code>, <code class="tt">br_if</code>, <code class="tt">br_table</code> は分岐命令を行う対象のブロックによって挙動が変わります。<code class="tt">block</code>, <code class="tt">if</code> ブロックでは、対応する <code class="tt">end</code> に、<code class="tt">loop</code> ブロックではブロックの先頭に飛びます。</p>
+
+<h4><a id="h3-4-1-2"></a><code class="tt">br</code></h4>
+<p><code class="tt">relative_depth</code> のイメージ</p>
+<div class="emlist-code">
+<pre class="emlist">block ;; 2
+  block ;; 1
+    block ;; 0
+      br 1 ;; 現在のブロックからの深さを指定して分岐
+    end
+  end
+end
+</pre>
+</div>
+<p>blockが値をpushしない場合、オペランドを受け取りません。blockが値をpushする場合、<code class="tt">op1</code>をpushします。</p>
+
+<h4><a id="h3-4-1-3"></a><code class="tt">br_if</code></h4>
+<p>blockが値をpushしない場合、<code class="tt">op1 != 0</code> のとき分岐します。blockが値をpushする場合、<code class="tt">op2 != 0</code> のとき分岐して、<code class="tt">op1</code> をpushします。</p>
+
+<h4><a id="h3-4-1-4"></a><code class="tt">br_table</code></h4>
+<p><code class="tt">br_table</code>オペコードは以下のような即値オペランドを持っています。</p>
+<div id="tbl34" class="table">
+<p class="caption">表3.34: </p>
+<table>
+<tr><th>フィールド</th><th>型</th><th>説明</th></tr>
+<tr><td>target_count</td><td><code class="tt">varuint32</code></td><td>target_tableのエントリー数</td></tr>
+<tr><td>target_table</td><td><code class="tt">varuint32*</code></td><td>分岐する対象の親ブロック列</td></tr>
+<tr><td>default_target</td><td><code class="tt">varuint32</code></td><td>デフォルトで分岐するブロック</td></tr>
+</table>
+</div>
+<p>ブロックが値をpushしない場合、<code class="tt">target_table</code>の<code class="tt">op1</code>番目のブロックに対して分岐命令を行います。ブロックが値をpushする場合は<code class="tt">br_if</code>などと同様に最初のオペランドがpushされます。入力値が範囲外の場合、<code class="tt">br_table</code>は<code class="tt">default_target</code>に指定されているブロックに対して分岐命令を行います。</p>
+<div class="note">
+<p>  オペコードの開いてる場所は将来のために予約されてます。</p>
+</div>
+
+<h3><a id="h3-4-2"></a><span class="secno">3.4.2　</span>Call operators</h3>
+<div id="tbl35" class="table">
+<p class="caption">表3.35: </p>
+<table>
+<tr><th>名前</th><th>オペコード</th><th>即値</th><th>説明</th></tr>
+<tr><td><code class="tt">call</code></td><td><code class="tt">0x10</code></td><td>function_index: <code class="tt">varuint32</code></td><td>function indexに対応する関数を呼ぶ</td></tr>
+<tr><td><code class="tt">call_indirect</code></td><td><code class="tt">0x11</code></td><td>type_index: <code class="tt">varuint32</code>, reserved: <code class="tt">veruint1</code></td><td><code class="tt">type_index</code> の型の関数を間接的に呼ぶ</td></tr>
+</table>
+</div>
+<p><code class="tt">call_indirect</code>は入力として、関数の引数分のオペランド（<code class="tt">type_index</code>から型を参照して引数の数を決定）とテーブルへのindexを受け取ります。テーブルのindex位置の<code class="tt">elem_segment</code>の中で指定されているfunction indexから関数を参照して呼び出します。<code class="tt">reserved</code>は将来的に使うので予約されてます。MVPでは0です。</p>
+
+<h3><a id="h3-4-3"></a><span class="secno">3.4.3　</span>Parametric operators</h3>
+<div id="tbl36" class="table">
+<p class="caption">表3.36: </p>
+<table>
+<tr><th>名前</th><th>オペコード</th><th>即値</th><th>説明</th></tr>
+<tr><td><code class="tt">drop</code></td><td><code class="tt">0x1a</code></td><td></td><td>スタックの1番上の値をpop</td></tr>
+<tr><td><code class="tt">select</code></td><td><code class="tt">0x1b</code></td><td></td><td><code class="tt">op3 != 0 ? op1 : op2</code></td></tr>
+</table>
+</div>
+
+<h3><a id="h3-4-4"></a><span class="secno">3.4.4　</span>Variable access</h3>
+<div id="tbl37" class="table">
+<p class="caption">表3.37: </p>
+<table>
+<tr><th>名前</th><th>オペコード</th><th>即値</th><th>説明</th></tr>
+<tr><td><code class="tt">get_local</code></td><td><code class="tt">0x20</code></td><td>local_index: <code class="tt">varuint32</code></td><td>local_indexで指定されたローカル変数をスタックにpush</td></tr>
+<tr><td><code class="tt">set_local</code></td><td><code class="tt">0x21</code></td><td>local_index: <code class="tt">varuint32</code></td><td><code class="tt">op1</code>の値をlocal_indexで指定されたローカル変数にセット</td></tr>
+<tr><td><code class="tt">tee_local</code></td><td><code class="tt">0x21</code></td><td>local_index: <code class="tt">varuint32</code></td><td><code class="tt">op1</code>の値をlocal_indexで指定されたローカル変数にセットして、同じ値をpush</td></tr>
+<tr><td><code class="tt">get_global</code></td><td><code class="tt">0x23</code></td><td>global_index: <code class="tt">varuint32</code></td><td>global_indexで指定されたグローバル変数をスタックにpush</td></tr>
+<tr><td><code class="tt">set_global</code></td><td><code class="tt">0x24</code></td><td>global_index: <code class="tt">varuint32</code></td><td><code class="tt">op1</code>の値をglobal_indexで指定されたグローバル変数にセット</td></tr>
+</table>
+</div>
+
+<h3><a id="h3-4-5"></a><span class="secno">3.4.5　</span>Memory-related operators</h3>
+<div id="tbl38" class="table">
+<p class="caption">表3.38: </p>
+<table>
+<tr><th>名前</th><th>オペコード</th><th>即値</th><th>説明</th></tr>
+<tr><td><code class="tt">i32.load</code></td><td><code class="tt">0x28</code></td><td><code class="tt">memory_immediate</code></td><td>メモリーのオフセット<code class="tt">op1 + memory_immediate.offset</code>（後述）から32bit整数のデータを読み込んでスタックにpush</td></tr>
+<tr><td><code class="tt">i64.load</code></td><td><code class="tt">0x29</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">f32.load</code></td><td><code class="tt">0x2a</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">f64.load</code></td><td><code class="tt">0x2b</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">i32.load8_s</code></td><td><code class="tt">0x2c</code></td><td><code class="tt">memory_immediate</code></td><td>符号あり8bit整数を以下略</td></tr>
+<tr><td><code class="tt">i32.load8_u</code></td><td><code class="tt">0x2d</code></td><td><code class="tt">memory_immediate</code></td><td>符号なし8bit整数を以下略</td></tr>
+<tr><td><code class="tt">i32.load16_s</code></td><td><code class="tt">0x2e</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">i32.load16_u</code></td><td><code class="tt">0x2f</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">i64.load8_s</code></td><td><code class="tt">0x30</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">i64.load8_u</code></td><td><code class="tt">0x31</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">i64.load16_s</code></td><td><code class="tt">0x32</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">i64.load16_u</code></td><td><code class="tt">0x33</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">i64.load32_s</code></td><td><code class="tt">0x34</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">i64.load32_u</code></td><td><code class="tt">0x35</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">i32.store</code></td><td><code class="tt">0x36</code></td><td><code class="tt">memory_immediate</code></td><td>メモリーのオフセット<code class="tt">op1 + memory_immediate.offset</code>（後述）に<code class="tt">op2</code>の値を書き込む</td></tr>
+<tr><td><code class="tt">i64.store</code></td><td><code class="tt">0x37</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">f32.store</code></td><td><code class="tt">0x38</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">f64.store</code></td><td><code class="tt">0x39</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">i32.store8</code></td><td><code class="tt">0x3a</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">i32.store16</code></td><td><code class="tt">0x3b</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">i64.store8</code></td><td><code class="tt">0x3c</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">i64.store16</code></td><td><code class="tt">0x3d</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">i64.store32</code></td><td><code class="tt">0x3e</code></td><td><code class="tt">memory_immediate</code></td><td>略</td></tr>
+<tr><td><code class="tt">current_memory</code></td><td><code class="tt">0x3f</code></td><td>reserved: <code class="tt">varuint1</code></td><td>メモリーのサイズを問い合わせる</td></tr>
+<tr><td><code class="tt">grow_memory</code></td><td><code class="tt">0x40</code></td><td>reserved: <code class="tt">varuint1</code></td><td>メモリーのサイズを拡張する</td></tr>
+</table>
+</div>
+<p><code class="tt">memory_immediate</code> は以下のようにエンコードされます。</p>
+<div id="tbl39" class="table">
+<p class="caption">表3.39: </p>
+<table>
+<tr><th>名前</th><th>型</th><th>説明</th></tr>
+<tr><td>flags</td><td><code class="tt">varuint32</code></td><td>フラグ。現在は最下位bitsがアライメントの値として使われている（<code class="tt">log2(alignment)</code>でエンコードされる）</td></tr>
+<tr><td>offset</td><td><code class="tt">varuint32</code></td><td>オフセット値</td></tr>
+</table>
+</div>
+<p>flagsは<code class="tt">log2(alignment)</code>でエンコードされるので2の累乗である必要があります。追加のバリデーション基準として、アライメントは元々のアライメント以下でないといけません。<code class="tt">log(memory-access-size)</code>より下位のbitsは0である必要があります。これは将来のために予約されてます（例えば、共有メモリーの順序のために必要）。</p>
+<p><code class="tt">current_memory</code>、<code class="tt">grow_memory</code>オペコードの<code class="tt">reserved</code>は将来的に使われる予定です（MVPでは0）。</p>
+
+<h3><a id="h3-4-6"></a><span class="secno">3.4.6　</span>Constants</h3>
+<div id="tbl40" class="table">
+<p class="caption">表3.40: </p>
+<table>
+<tr><th>名前</th><th>オペコード</th><th>即値</th><th>説明</th></tr>
+<tr><td><code class="tt">i32.const</code></td><td><code class="tt">0x41</code></td><td>value:<code class="tt">varint32</code></td><td><code class="tt">i32</code>と解釈される定数値をpush</td></tr>
+<tr><td><code class="tt">i64.const</code></td><td><code class="tt">0x42</code></td><td>value:<code class="tt">varint64</code></td><td><code class="tt">i64</code>と解釈される定数値をpush</td></tr>
+<tr><td><code class="tt">f32.const</code></td><td><code class="tt">0x43</code></td><td>value:<code class="tt">uint32</code></td><td><code class="tt">f32</code>と解釈される定数値をpush</td></tr>
+<tr><td><code class="tt">f64.const</code></td><td><code class="tt">0x44</code></td><td>value:<code class="tt">uint64</code></td><td><code class="tt">f64</code>と解釈される定数値をpush</td></tr>
+</table>
+</div>
+
+<h3><a id="h3-4-7"></a><span class="secno">3.4.7　</span>Comparison operators</h3>
+<p>真の場合は1、偽の場合は0をpushします。</p>
+<div id="tbl41" class="table">
+<p class="caption">表3.41: </p>
+<table>
+<tr><th>名前</th><th>オペコード</th><th>即値</th><th>説明</th></tr>
+<tr><td><code class="tt">i32.eqz</code></td><td><code class="tt">0x45</code></td><td></td><td><code class="tt">op1 == 0</code></td></tr>
+<tr><td><code class="tt">i32.eq</code></td><td><code class="tt">0x46</code></td><td></td><td><code class="tt">op1 == op2</code>（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i32.ne</code></td><td><code class="tt">0x47</code></td><td></td><td><code class="tt">op1 != op2</code>（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i32.lt_s</code></td><td><code class="tt">0x48</code></td><td></td><td><code class="tt">op1 &lt; op2</code>（符号付き整数として）</td></tr>
+<tr><td><code class="tt">i32.lt_u</code></td><td><code class="tt">0x49</code></td><td></td><td><code class="tt">op1 &lt; op2</code>（符号なし整数として）</td></tr>
+<tr><td><code class="tt">i32.gt_s</code></td><td><code class="tt">0x4a</code></td><td></td><td><code class="tt">op1 &gt; op2</code>（符号付き整数として）</td></tr>
+<tr><td><code class="tt">i32.gt_u</code></td><td><code class="tt">0x4b</code></td><td></td><td><code class="tt">op1 &gt; op2</code>（符号なし整数として）</td></tr>
+<tr><td><code class="tt">i32.le_s</code></td><td><code class="tt">0x4c</code></td><td></td><td><code class="tt">op1 &lt;= op2</code>（符号付き整数として）</td></tr>
+<tr><td><code class="tt">i32.le_u</code></td><td><code class="tt">0x4d</code></td><td></td><td><code class="tt">op1 &lt;= op2</code>（符号なし整数として）</td></tr>
+<tr><td><code class="tt">i32.ge_s</code></td><td><code class="tt">0x4e</code></td><td></td><td><code class="tt">op1 &gt;= op2</code>（符号付き整数として）</td></tr>
+<tr><td><code class="tt">i32.ge_u</code></td><td><code class="tt">0x4f</code></td><td></td><td><code class="tt">op1 &gt;= op2</code>（符号なし整数として）</td></tr>
+<tr><td><code class="tt">i64.eqz</code></td><td><code class="tt">0x50</code></td><td></td><td><code class="tt">op1 == 0</code></td></tr>
+<tr><td><code class="tt">i64.eq</code></td><td><code class="tt">0x51</code></td><td></td><td><code class="tt">op1 == op2</code>（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i64.ne</code></td><td><code class="tt">0x52</code></td><td></td><td><code class="tt">op1 != op2</code>（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i64.lt_s</code></td><td><code class="tt">0x53</code></td><td></td><td><code class="tt">op1 &lt; op2</code>（符号付き整数として）</td></tr>
+<tr><td><code class="tt">i64.lt_u</code></td><td><code class="tt">0x54</code></td><td></td><td><code class="tt">op1 &lt; op2</code>（符号なし整数として）</td></tr>
+<tr><td><code class="tt">i64.gt_s</code></td><td><code class="tt">0x55</code></td><td></td><td><code class="tt">op1 &gt; op2</code>（符号付き整数として）</td></tr>
+<tr><td><code class="tt">i64.gt_u</code></td><td><code class="tt">0x56</code></td><td></td><td><code class="tt">op1 &gt; op2</code>（符号なし整数として）</td></tr>
+<tr><td><code class="tt">i64.le_s</code></td><td><code class="tt">0x57</code></td><td></td><td><code class="tt">op1 &lt;= op2</code>（符号付き整数として）</td></tr>
+<tr><td><code class="tt">i64.le_u</code></td><td><code class="tt">0x58</code></td><td></td><td><code class="tt">op1 &lt;= op2</code>（符号なし整数として）</td></tr>
+<tr><td><code class="tt">i64.ge_s</code></td><td><code class="tt">0x59</code></td><td></td><td><code class="tt">op1 &gt;= op2</code>（符号付き整数として）</td></tr>
+<tr><td><code class="tt">i64.ge_u</code></td><td><code class="tt">0x5a</code></td><td></td><td><code class="tt">op1 &gt;= op2</code>（符号なし整数として）</td></tr>
+<tr><td><code class="tt">f32.eq</code></td><td><code class="tt">0x5b</code></td><td></td><td><code class="tt">op1 == op2</code></td></tr>
+<tr><td><code class="tt">f32.ne</code></td><td><code class="tt">0x5c</code></td><td></td><td><code class="tt">op1 != op2</code></td></tr>
+<tr><td><code class="tt">f32.lt</code></td><td><code class="tt">0x5d</code></td><td></td><td><code class="tt">op1 &lt; op2</code></td></tr>
+<tr><td><code class="tt">f32.gt</code></td><td><code class="tt">0x5e</code></td><td></td><td><code class="tt">op1 &gt; op2</code></td></tr>
+<tr><td><code class="tt">f32.le</code></td><td><code class="tt">0x5f</code></td><td></td><td><code class="tt">op1 &lt;= op2</code></td></tr>
+<tr><td><code class="tt">f32.ge</code></td><td><code class="tt">0x60</code></td><td></td><td><code class="tt">op1 &gt;= op2</code></td></tr>
+<tr><td><code class="tt">f64.eq</code></td><td><code class="tt">0x61</code></td><td></td><td><code class="tt">op1 == op2</code></td></tr>
+<tr><td><code class="tt">f64.ne</code></td><td><code class="tt">0x62</code></td><td></td><td><code class="tt">op1 != op2</code></td></tr>
+<tr><td><code class="tt">f64.lt</code></td><td><code class="tt">0x63</code></td><td></td><td><code class="tt">op1 &lt; op2</code></td></tr>
+<tr><td><code class="tt">f64.gt</code></td><td><code class="tt">0x64</code></td><td></td><td><code class="tt">op1 &gt; op2</code></td></tr>
+<tr><td><code class="tt">f64.le</code></td><td><code class="tt">0x65</code></td><td></td><td><code class="tt">op1 &lt;= op2</code></td></tr>
+<tr><td><code class="tt">f64.ge</code></td><td><code class="tt">0x66</code></td><td></td><td><code class="tt">op1 &gt;= op2</code></td></tr>
+</table>
+</div>
+
+<h3><a id="h3-4-8"></a><span class="secno">3.4.8　</span>Numeric operators</h3>
+<div id="tbl42" class="table">
+<p class="caption">表3.42: </p>
+<table>
+<tr><th>名前</th><th>オペコード</th><th>即値</th><th>説明</th></tr>
+<tr><td><code class="tt">i32.clz</code></td><td><code class="tt">0x67</code></td><td></td><td><code class="tt">op1</code>の値について最上位bitから0が連続する回数（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i32.ctz</code></td><td><code class="tt">0x68</code></td><td></td><td><code class="tt">op1</code>の値について最下位bitから0が連続する回数（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i32.popcnt</code></td><td><code class="tt">0x69</code></td><td></td><td><code class="tt">op1</code>の値について1になっているbitの数（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i32.add</code></td><td><code class="tt">0x6a</code></td><td></td><td><code class="tt">op1 + op2</code>（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i32.sub</code></td><td><code class="tt">0x6b</code></td><td></td><td><code class="tt">op1 - op2</code>（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i32.mul</code></td><td><code class="tt">0x6c</code></td><td></td><td><code class="tt">op1 * op2</code>（符号に依存しない, 下位32bitが結果になる）</td></tr>
+<tr><td><code class="tt">i32.div_s</code></td><td><code class="tt">0x6d</code></td><td></td><td><code class="tt">op1 / op2</code>符号あり（結果は0方向に切り捨て）</td></tr>
+<tr><td><code class="tt">i32.div_u</code></td><td><code class="tt">0x6e</code></td><td></td><td><code class="tt">op1 / op2</code>符号なし（切り捨て）</td></tr>
+<tr><td><code class="tt">i32.rem_s</code></td><td><code class="tt">0x6f</code></td><td></td><td><code class="tt">op1 % op2</code>符号付き（符号は割られる方が使われる）</td></tr>
+<tr><td><code class="tt">i32.rem_u</code></td><td><code class="tt">0x70</code></td><td></td><td><code class="tt">op1 % op2</code>符号なし</td></tr>
+<tr><td><code class="tt">i32.and</code></td><td><code class="tt">0x71</code></td><td></td><td><code class="tt">op1 &amp; op2</code>（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i32.or</code></td><td><code class="tt">0x72</code></td><td></td><td><code class="tt">op1 | op2</code>（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i32.xor</code></td><td><code class="tt">0x73</code></td><td></td><td><code class="tt">op1 ^ op2</code>（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i32.shl</code></td><td><code class="tt">0x74</code></td><td></td><td><code class="tt">op1 &lt;&lt; op2</code>（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i32.shr_s</code></td><td><code class="tt">0x75</code></td><td></td><td><code class="tt">op1 &gt;&gt; op2</code>（算術シフト）</td></tr>
+<tr><td><code class="tt">i32.shr_u</code></td><td><code class="tt">0x76</code></td><td></td><td><code class="tt">op1 &gt;&gt;&gt; op2</code>（論理シフト）</td></tr>
+<tr><td><code class="tt">i32.rotl</code></td><td><code class="tt">0x77</code></td><td></td><td>左ローテート（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i32.rotr</code></td><td><code class="tt">0x78</code></td><td></td><td>右ローテート（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i64.clz</code></td><td><code class="tt">0x79</code></td><td></td><td>最上位bitから0が連続する回数（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i64.ctz</code></td><td><code class="tt">0x7a</code></td><td></td><td>最下位bitから0が連続する回数（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i64.popcnt</code></td><td><code class="tt">0x7b</code></td><td></td><td>1になっているbitの数（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i64.add</code></td><td><code class="tt">0x7c</code></td><td></td><td><code class="tt">op1 + op2</code>（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i64.sub</code></td><td><code class="tt">0x7d</code></td><td></td><td><code class="tt">op1 - op2</code>（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i64.mul</code></td><td><code class="tt">0x7e</code></td><td></td><td><code class="tt">op1 * op2</code>（符号に依存しない, 下位64bitが結果になる）</td></tr>
+<tr><td><code class="tt">i64.div_s</code></td><td><code class="tt">0x7f</code></td><td></td><td><code class="tt">op1 / op2</code>符号あり（結果は0方向に切り捨て）</td></tr>
+<tr><td><code class="tt">i64.div_u</code></td><td><code class="tt">0x80</code></td><td></td><td><code class="tt">op1 / op2</code>符号なし（切り捨て）</td></tr>
+<tr><td><code class="tt">i64.rem_s</code></td><td><code class="tt">0x81</code></td><td></td><td><code class="tt">op1 % op2</code>符号付き（符号は割られる方が使われる）</td></tr>
+<tr><td><code class="tt">i64.rem_u</code></td><td><code class="tt">0x82</code></td><td></td><td><code class="tt">op1 % op2</code>符号なし</td></tr>
+<tr><td><code class="tt">i64.and</code></td><td><code class="tt">0x83</code></td><td></td><td><code class="tt">op1 &amp; op2</code>（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i64.or</code></td><td><code class="tt">0x84</code></td><td></td><td><code class="tt">op1 | op2</code>（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i64.xor</code></td><td><code class="tt">0x85</code></td><td></td><td><code class="tt">op1 ^ op2</code>（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i64.shl</code></td><td><code class="tt">0x86</code></td><td></td><td><code class="tt">op1 &lt;&lt; op2</code>（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i64.shr_s</code></td><td><code class="tt">0x87</code></td><td></td><td><code class="tt">op1 &gt;&gt; op2</code>（算術シフト）</td></tr>
+<tr><td><code class="tt">i64.shr_u</code></td><td><code class="tt">0x88</code></td><td></td><td><code class="tt">op1 &gt;&gt;&gt; op2</code>（論理シフト）</td></tr>
+<tr><td><code class="tt">i64.rotl</code></td><td><code class="tt">0x89</code></td><td></td><td>左ローテート（符号に依存しない）</td></tr>
+<tr><td><code class="tt">i64.rotr</code></td><td><code class="tt">0x8a</code></td><td></td><td>右ローテート（符号に依存しない）</td></tr>
+<tr><td><code class="tt">f32.abs</code></td><td><code class="tt">0x8b</code></td><td></td><td>絶対値</td></tr>
+<tr><td><code class="tt">f32.neg</code></td><td><code class="tt">0x8c</code></td><td></td><td>符号逆転</td></tr>
+<tr><td><code class="tt">f32.ceil</code></td><td><code class="tt">0x8d</code></td><td></td><td>切り上げ</td></tr>
+<tr><td><code class="tt">f32.floor</code></td><td><code class="tt">0x8e</code></td><td></td><td>切り捨て</td></tr>
+<tr><td><code class="tt">f32.trunc</code></td><td><code class="tt">0x8f</code></td><td></td><td>0方向に丸める</td></tr>
+<tr><td><code class="tt">f32.nearest</code></td><td><code class="tt">0x90</code></td><td></td><td>四捨五入（偶数丸め）</td></tr>
+<tr><td><code class="tt">f32.sqrt</code></td><td><code class="tt">0x91</code></td><td></td><td>平方根</td></tr>
+<tr><td><code class="tt">f32.add</code></td><td><code class="tt">0x92</code></td><td></td><td><code class="tt">op1 + op2</code></td></tr>
+<tr><td><code class="tt">f32.sub</code></td><td><code class="tt">0x93</code></td><td></td><td><code class="tt">op1 - op2</code></td></tr>
+<tr><td><code class="tt">f32.mul</code></td><td><code class="tt">0x94</code></td><td></td><td><code class="tt">op1 * op2</code></td></tr>
+<tr><td><code class="tt">f32.div</code></td><td><code class="tt">0x95</code></td><td></td><td><code class="tt">op1 / op2</code></td></tr>
+<tr><td><code class="tt">f32.min</code></td><td><code class="tt">0x96</code></td><td></td><td>2つの値のうち小さい方をpush。どちらかのオペランドがNaNの場合NaN</td></tr>
+<tr><td><code class="tt">f32.max</code></td><td><code class="tt">0x97</code></td><td></td><td>2つの値のうち大きい方をpush。どちらかのオペランドがNaNの場合NaN</td></tr>
+<tr><td><code class="tt">f32.copysign</code></td><td><code class="tt">0x98</code></td><td></td><td>1つ目の値の符号を2つ目の値にコピーしたものをpush</td></tr>
+<tr><td><code class="tt">f64.abs</code></td><td><code class="tt">0x99</code></td><td></td><td>絶対値</td></tr>
+<tr><td><code class="tt">f64.neg</code></td><td><code class="tt">0x9a</code></td><td></td><td>符号逆転</td></tr>
+<tr><td><code class="tt">f64.ceil</code></td><td><code class="tt">0x9b</code></td><td></td><td>切り上げ</td></tr>
+<tr><td><code class="tt">f64.floor</code></td><td><code class="tt">0x9c</code></td><td></td><td>切り捨て</td></tr>
+<tr><td><code class="tt">f64.trunc</code></td><td><code class="tt">0x9d</code></td><td></td><td>0方向に丸める</td></tr>
+<tr><td><code class="tt">f64.nearest</code></td><td><code class="tt">0x9e</code></td><td></td><td>四捨五入（偶数丸め）</td></tr>
+<tr><td><code class="tt">f64.sqrt</code></td><td><code class="tt">0x9f</code></td><td></td><td>平方根</td></tr>
+<tr><td><code class="tt">f64.add</code></td><td><code class="tt">0xa0</code></td><td></td><td><code class="tt">op1 + op2</code></td></tr>
+<tr><td><code class="tt">f64.sub</code></td><td><code class="tt">0xa1</code></td><td></td><td><code class="tt">op1 - op2</code></td></tr>
+<tr><td><code class="tt">f64.mul</code></td><td><code class="tt">0xa2</code></td><td></td><td><code class="tt">op1 * op2</code></td></tr>
+<tr><td><code class="tt">f64.div</code></td><td><code class="tt">0xa3</code></td><td></td><td><code class="tt">op1 / op2</code></td></tr>
+<tr><td><code class="tt">f64.min</code></td><td><code class="tt">0xa4</code></td><td></td><td>2つの値のうち小さい方をpush。どちらかのオペランドがNaNの場合NaN</td></tr>
+<tr><td><code class="tt">f64.max</code></td><td><code class="tt">0xa5</code></td><td></td><td>2つの値のうち大きい方をpush。どちらかのオペランドがNaNの場合NaN</td></tr>
+<tr><td><code class="tt">f64.copysign</code></td><td><code class="tt">0xa6</code></td><td></td><td>2つ目の値の符号を1つ目の値にコピーしたものをpush</td></tr>
+</table>
+</div>
+<p></p>
+
+<h3><a id="h3-4-9"></a><span class="secno">3.4.9　</span>Conversions</h3>
+<p>型変換を行います。</p>
+<p><code class="tt">f64.convert_s/i32</code>では最近接偶数へ丸められます。そして、IEEE 754-2008で定義された無限大、負の無限大にオーバーフローする可能性があります。</p>
+<p>浮動小数点数から整数に変換する命令（trunc）の場合、0方向に丸められた整数値となります。オーバーフローするような数値を変換しようとするとエラーとなります。</p>
+<div id="tbl43" class="table">
+<p class="caption">表3.43: </p>
+<table>
+<tr><th>名前</th><th>オペコード</th><th>即値</th><th>説明</th></tr>
+<tr><td><code class="tt">i32.wrap/i64</code></td><td><code class="tt">0xa7</code></td><td></td><td>64bit整数を受け取って、それの下位32bitをpush</td></tr>
+<tr><td><code class="tt">i32.trunc_s/f32</code></td><td><code class="tt">0xa8</code></td><td></td><td>32bit浮動小数点数を受け取って、0方向に丸めた32bitの符号付き整数をpush</td></tr>
+<tr><td><code class="tt">i32.trunc_u/f32</code></td><td><code class="tt">0xa9</code></td><td></td><td>32bit浮動小数点数を受け取って、0方向に丸めた32bitの符号なし整数をpush</td></tr>
+<tr><td><code class="tt">i32.trunc_s/f64</code></td><td><code class="tt">0xaa</code></td><td></td><td>64bit浮動小数点数を受け取って、0方向に丸めた32bitの符号付き整数をpush</td></tr>
+<tr><td><code class="tt">i32.trunc_u/f64</code></td><td><code class="tt">0xab</code></td><td></td><td>64bit浮動小数点数を受け取って、0方向に丸めた32bitの符号なし整数をpush</td></tr>
+<tr><td><code class="tt">i64.extend_s/i32</code></td><td><code class="tt">0xac</code></td><td></td><td>32bit整数を64bit符号付き整数に拡張する</td></tr>
+<tr><td><code class="tt">i64.extend_u/i32</code></td><td><code class="tt">0xad</code></td><td></td><td>32bit整数を64bit符号なし整数に拡張する</td></tr>
+<tr><td><code class="tt">i64.trunc_s/f32</code></td><td><code class="tt">0xae</code></td><td></td><td>32bit浮動小数点数を受け取って、0方向に丸めた64bitの符号付き整数をpush</td></tr>
+<tr><td><code class="tt">i64.trunc_u/f32</code></td><td><code class="tt">0xaf</code></td><td></td><td>32bit浮動小数点数を受け取って、0方向に丸めた64bitの符号なし整数をpush</td></tr>
+<tr><td><code class="tt">i64.trunc_s/f64</code></td><td><code class="tt">0xb0</code></td><td></td><td>64bit浮動小数点数を受け取って、0方向に丸めた64bitの符号付き整数をpush</td></tr>
+<tr><td><code class="tt">i64.trunc_u/f64</code></td><td><code class="tt">0xb1</code></td><td></td><td>64bit浮動小数点数を受け取って、0方向に丸めた64bitの符号なし整数をpush</td></tr>
+<tr><td><code class="tt">f32.convert_s/i32</code></td><td><code class="tt">0xb2</code></td><td></td><td>32bit整数を32bit浮動小数点数に変換する（符号ありとして）</td></tr>
+<tr><td><code class="tt">f32.convert_u/i32</code></td><td><code class="tt">0xb3</code></td><td></td><td>32bit整数を32bit浮動小数点数に変換する（符号なしとして）</td></tr>
+<tr><td><code class="tt">f32.convert_s/i64</code></td><td><code class="tt">0xb4</code></td><td></td><td>64bit整数を32bit浮動小数点数に変換する（符号ありとして）</td></tr>
+<tr><td><code class="tt">f32.convert_u/i64</code></td><td><code class="tt">0xb5</code></td><td></td><td>64bit整数を32bit浮動小数点数に変換する（符号なしとして）</td></tr>
+<tr><td><code class="tt">f32.demote/f64</code></td><td><code class="tt">0xb6</code></td><td></td><td>64bit浮動小数点数から32bit浮動小数点数に変換</td></tr>
+<tr><td><code class="tt">f64.convert_s/i32</code></td><td><code class="tt">0xb7</code></td><td></td><td>32bit整数を64bit浮動小数点数に変換する（符号ありとして）</td></tr>
+<tr><td><code class="tt">f64.convert_u/i32</code></td><td><code class="tt">0xb8</code></td><td></td><td>32bit整数を64bit浮動小数点数に変換する（符号なしとして）</td></tr>
+<tr><td><code class="tt">f64.convert_s/i64</code></td><td><code class="tt">0xb9</code></td><td></td><td>64bit整数を64bit浮動小数点数に変換する（符号ありとして）</td></tr>
+<tr><td><code class="tt">f64.convert_u/i64</code></td><td><code class="tt">0xba</code></td><td></td><td>64bit整数を64bit浮動小数点数に変換する（符号なしとして）</td></tr>
+<tr><td><code class="tt">f64.promote/f32</code></td><td><code class="tt">0xbb</code></td><td></td><td>32bit浮動小数点数から64bit浮動小数点数に変換</td></tr>
+</table>
+</div>
+<p></p>
+
+<h3><a id="h3-4-10"></a><span class="secno">3.4.10　</span>Reinterpretations</h3>
+<p>変換前の数値をただのbit列として扱って変換後の型として再解釈します。</p>
+<div id="tbl44" class="table">
+<p class="caption">表3.44: </p>
+<table>
+<tr><th>名前</th><th>オペコード</th><th>即値</th><th>説明</th></tr>
+<tr><td><code class="tt">i32.reinterpret/f32</code></td><td><code class="tt">0xbc</code></td><td></td><td>32bit浮動小数点数を32bit整数として再解釈する</td></tr>
+<tr><td><code class="tt">i64.reinterpret/f64</code></td><td><code class="tt">0xbd</code></td><td></td><td>64bit浮動小数点数を64bit整数として再解釈する</td></tr>
+<tr><td><code class="tt">f32.reinterpret/i32</code></td><td><code class="tt">0xbe</code></td><td></td><td>32bit整数を32bit浮動小数点数として再解釈する</td></tr>
+<tr><td><code class="tt">f64.reinterpret/i64</code></td><td><code class="tt">0xbf</code></td><td></td><td>64bit整数を64bit浮動小数点数として再解釈する</td></tr>
+</table>
+</div>
+<p></p>
+<p>　</p>
+      </div>
+      <nav class="book-navi book-prev">
+                <a href="get-started-webassembly.html">
+          <div class="book-cursor"><span class="cursor-prev">◀</span></div>
+        </a>
+              </nav>
+      <nav class="book-navi book-next">
+                <a href="text-format.html">
+          <div class="book-cursor"><span class="cursor-next">▶</span></div>
+        </a>
+              </nav>
+    </div>
+  </div>
+  <footer>
+      </footer>
+  </body>
+</html>

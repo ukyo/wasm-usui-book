@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" type="text/css" href="style.css" />
+<link rel="next" title="WebAssemblyをはじめよう" href="get-started-webassembly.html"><link rel="prev" title="まえがき" href="intro.html">  <meta name="generator" content="Re:VIEW" />
+  <title>WebAssemblyとは | WEBASSEMBLY USUI BOOK</title>
+</head>
+<body>
+  <div class="book">
+    <nav class="side-content">
+      <h1>WEBASSEMBLY USUI BOOK</h1>
+      <ul class="book-toc">
+<li><a href="index.html">TOP</a></li>
+<li><a href="./intro.html">まえがき</a></li>
+<li><a href="./what-is-webassembly.html">1 WebAssemblyとは</a></li>
+<li><a href="./get-started-webassembly.html">2 WebAssemblyをはじめよう</a></li>
+<li><a href="./binary-format.html">3 WebAssembly バイナリ表現</a></li>
+<li><a href="./text-format.html">4 WebAssembly テキスト表現</a></li>
+<li><a href="./bib.html">参考文献</a></li>
+</ul>
+      <p class="review-signature">powered by <a href="http://reviewml.org/">Re:VIEW</a></p>
+    </nav>
+    <div class="book-body">
+      <header>
+      </header>
+      <div class="book-page">
+        <h1><a id="h1"></a><span class="secno">第1章　</span>WebAssemblyとは</h1>
+<p></p>
+
+<h2><a id="h1-1"></a><span class="secno">1.1　</span>WebAssemblyの概要</h2>
+<p>MDN<a id="fnb-wasm-abstract" href="#fn-wasm-abstract" class="noteref" epub:type="noteref">*1</a>から引用すると、WebAssemblyはモダンなWebブラウザで実行できる新しいタイプのコードで、新しい機能とパフォーマンスの大幅な向上をもたらします。基本的には、手書きではなく、C、C++、Rustなどの低レベルな言語からのコンパイル対象となるように設計されています。</p>
+<p>WebAssemblyはWebプラットフォームに大きな影響を与えます。複数の言語で書かれたコードをWeb上でネイティブに近い速度で実行する方法を提供します。</p>
+<p>さらに、WebAssemblyの作成方法を知らなくても恩恵を受けることができます。WebAssemblyモジュールをWeb（またはNode.js）アプリケーションにインポートして、WebAssemblyの関数をJavaScriptから使用することができます。JavaScriptフレームワークではWebAssemblyによってパフォーマンス向上や新機能を提供しながら、Web開発者は簡単に機能を利用することができます。</p>
+<div class="footnote" epub:type="footnote" id="fn-wasm-abstract"><p class="footnote">[*1] https://developer.mozilla.org/en-US/docs/WebAssembly/Concepts</p></div>
+
+<h2><a id="h1-2"></a><span class="secno">1.2　</span>現状できること（Minimum Viable Product）</h2>
+<p>WebAssemblyは必要最低限の機能（英語だとMinimum Viable Product、以下MVPと記述）だけを持ってリリースされました。大まかにはasm.jsと同等のことができて、具体的には以下のような機能を利用することができます。</p>
+<ul>
+<li>WebAssemblyモジュールのソースコード（バイナリ）をJS API<a href="bib.html#bib-js-api">[1]</a>を用いてコンパイルし、ブラウザのJS環境上で動かすことができます。</li>
+<li>64bit整数やJSにはない低レベルの命令がサポートされています。</li>
+<li>変数、関数、線形メモリー、テーブル（参照を要素として持つ型付き配列で、現状は関数だけ）がサポートされています。</li>
+<li>上の機能に対してインポート、エクスポートするための仕組みが存在します。</li>
+</ul>
+
+<h2><a id="h1-3"></a><span class="secno">1.3　</span>将来的な機能</h2>
+<p>外部ツールの拡充、スレッド、SIMD、GC/DOM/Web APIの統合など、いつ実装されるかわかりませんが夢のある機能が控えています<a href="bib.html#bib-future-feature">[2]</a>。</p>
+
+<h2><a id="h1-4"></a><span class="secno">1.4　</span>バイナリ表現とテキスト表現</h2>
+<p>WebAssemblyの内容はバイナリで表現されますが、人が読んだりデバッグしたり、または直接書くためのテキスト表現が存在します。本書では、そのテキスト表現を多用します。ただし、現状使われているテキスト表現の仕様は最終決定されたものではないので、本書のサンプルコードが使用できなくなる可能性があります。</p>
+<p>以下、バイナリ表現をwasm、テキスト表現をwastと表記します。</p>
+
+<h2><a id="h1-5"></a><span class="secno">1.5　</span>Webブラウザで実行されるまで</h2>
+<p>まずは、C、C++、Rust言語などからemscripten経由<a href="bib.html#bib-emcc-to-wasm">[3]</a><a href="bib.html#bib-rust-to-wasm">[4]</a>で、もしくはwastから直接変換するかしてサーバー上にwasmを設置します。次にブラウザからwasmをダウンロードし、<code class="tt">WebAssembly.compile</code>を用いてモジュールにコンパイルし、それを<code class="tt">WebAssembly.instantiate</code>を用いて実行可能なインスタンスを生成してようやくJS環境上で動かすことができます。emscripten経由で変換された場合はそのあたりの面倒な部分をJSやhtmlに埋め込んでくれるので、ちょっと試すだけならこちらのほうが楽です。</p>
+<div id="use-wasm" class="image">
+<img src="images/use-wasm.png" alt="Webブラウザで実行されるまで" class="width-050per" />
+<p class="caption">
+図1.1: Webブラウザで実行されるまで
+</p>
+</div>
+
+<h2><a id="h1-6"></a><span class="secno">1.6　</span>ロゴ</h2>
+<p>WebAssemblyのロゴは、色々なものが提案されて、その中から投票によって決定されました<a id="fnb-logo-vote" href="#fn-logo-vote" class="noteref" epub:type="noteref">*2</a>。ロゴのライセンスはCC0です。</p>
+<div class="footnote" epub:type="footnote" id="fn-logo-vote"><p class="footnote">[*2] https://github.com/WebAssembly/design/issues/980</p></div>
+<div id="web-assembly-logo-black" class="image">
+<img src="images/web-assembly-logo-black.png" alt="WebAssemblyロゴ" class="width-050per" />
+<p class="caption">
+図1.2: WebAssemblyロゴ
+</p>
+</div>
+<p>　</p>
+      </div>
+      <nav class="book-navi book-prev">
+                <a href="intro.html">
+          <div class="book-cursor"><span class="cursor-prev">◀</span></div>
+        </a>
+              </nav>
+      <nav class="book-navi book-next">
+                <a href="get-started-webassembly.html">
+          <div class="book-cursor"><span class="cursor-next">▶</span></div>
+        </a>
+              </nav>
+    </div>
+  </div>
+  <footer>
+      </footer>
+  </body>
+</html>
