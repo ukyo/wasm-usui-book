@@ -103,7 +103,7 @@ MVPでは、オペコードの個数はは256以下であるため1バイトで�
 フィールド	型	説明
 -----------------
 form	@<tt>{varint7}	上の表で定義した@<tt>{func}型コンストラクタの値
-param_count	varuint32	関数のパラメータ数
+param_count	@<tt>{varuint32}	関数のパラメータ数
 param_types	@<tt>{value_type*}	関数のパラメータの型(パラメータ数だけ用意)
 return_count	@<tt>{varuint1}	関数の返り値の数
 return_type	@<tt>{value_type?}	関数の返り値の型(return_countが1なら)
@@ -563,7 +563,7 @@ body_size	@<tt>{varuint32}	関数本体のバイト数
 local_count	@<tt>{varuint32}	ローカル変数の数
 locals	@<tt>{local_entry}	ローカル変数列
 code	@<tt>{byte*}	関数のバイトコード
-end	`byte	@<tt>{0x0b}、関数本体の終了
+end	@<tt>{byte}	@<tt>{0x0b}、関数本体の終了
 //}
 
 === Local entry
@@ -693,7 +693,7 @@ default_target	@<tt>{varuint32}	デフォルトで分岐するブロック
 -----------------
 @<tt>{get_local}	@<tt>{0x20}	local_index: @<tt>{varuint32}	local_indexで指定されたローカル変数をスタックにpush
 @<tt>{set_local}	@<tt>{0x21}	local_index: @<tt>{varuint32}	@<tt>{op1}の値をlocal_indexで指定されたローカル変数にセット
-@<tt>{tee_local}	@<tt>{0x21}	local_index: @<tt>{varuint32}	@<tt>{op1}の値をlocal_indexで指定されたローカル変数にセットして、同じ値をpush
+@<tt>{tee_local}	@<tt>{0x22}	local_index: @<tt>{varuint32}	@<tt>{op1}の値をlocal_indexで指定されたローカル変数にセットして、同じ値をpush
 @<tt>{get_global}	@<tt>{0x23}	global_index: @<tt>{varuint32}	global_indexで指定されたグローバル変数をスタックにpush
 @<tt>{set_global}	@<tt>{0x24}	global_index: @<tt>{varuint32}	@<tt>{op1}の値をglobal_indexで指定されたグローバル変数にセット
 //}
