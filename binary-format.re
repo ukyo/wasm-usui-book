@@ -16,17 +16,17 @@
 符号なしの @<b>{N} bitの整数値、リトルエンディアンで表現されます。@<tt>{uint8}、 @<tt>{uint16}、 @<tt>{uint32} の3種類が使用されています。
 
 
-==== @<tt>{veruintN}
+==== @<tt>{varuintN}
 
 
 LEB128@<bib>{LEB128}で表現される @<b>{N} bitの符号なし整数です。
 
 
 //note{
-現在 @<tt>{varuint1}, @<tt>{veruint7}, @<tt>{varuint32}のみ使用されてます。前者2つは将来的な拡張機能と互換性のために使用されています。
+現在 @<tt>{varuint1}, @<tt>{varuint7}, @<tt>{varuint32}のみ使用されてます。前者2つは将来的な拡張機能と互換性のために使用されています。
 //}
 
-==== @<tt>{verintN}
+==== @<tt>{varintN}
 
 
 符号付きLEB128で表現される @<b>{N} bitの整数です。
