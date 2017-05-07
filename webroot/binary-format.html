@@ -37,13 +37,13 @@
 <h4><a id="h3-1-1-1"></a><code class="tt">uintN</code></h4>
 <p>符号なしの <b>N</b> bitの整数値、リトルエンディアンで表現されます。<code class="tt">uint8</code>、 <code class="tt">uint16</code>、 <code class="tt">uint32</code> の3種類が使用されています。</p>
 
-<h4><a id="h3-1-1-2"></a><code class="tt">veruintN</code></h4>
+<h4><a id="h3-1-1-2"></a><code class="tt">varuintN</code></h4>
 <p>LEB128<a href="bib.html#bib-LEB128">[6]</a>で表現される <b>N</b> bitの符号なし整数です。</p>
 <div class="note">
-<p>現在 <code class="tt">varuint1</code>, <code class="tt">veruint7</code>, <code class="tt">varuint32</code>のみ使用されてます。前者2つは将来的な拡張機能と互換性のために使用されています。</p>
+<p>現在 <code class="tt">varuint1</code>, <code class="tt">varuint7</code>, <code class="tt">varuint32</code>のみ使用されてます。前者2つは将来的な拡張機能と互換性のために使用されています。</p>
 </div>
 
-<h4><a id="h3-1-1-3"></a><code class="tt">verintN</code></h4>
+<h4><a id="h3-1-1-3"></a><code class="tt">varintN</code></h4>
 <p>符号付きLEB128で表現される <b>N</b> bitの整数です。</p>
 <div class="note">
 <p>  現在 <code class="tt">varint7</code>, <code class="tt">varint32</code>, <code class="tt">varint64</code>が使用されています。</p>
@@ -91,7 +91,7 @@
 <table>
 <tr><th>フィールド</th><th>型</th><th>説明</th></tr>
 <tr><td>form</td><td><code class="tt">varint7</code></td><td>上の表で定義した<code class="tt">func</code>型コンストラクタの値</td></tr>
-<tr><td>param_count</td><td>varuint32</td><td>関数のパラメータ数</td></tr>
+<tr><td>param_count</td><td><code class="tt">varuint32</code></td><td>関数のパラメータ数</td></tr>
 <tr><td>param_types</td><td><code class="tt">value_type*</code></td><td>関数のパラメータの型(パラメータ数だけ用意)</td></tr>
 <tr><td>return_count</td><td><code class="tt">varuint1</code></td><td>関数の返り値の数</td></tr>
 <tr><td>return_type</td><td><code class="tt">value_type?</code></td><td>関数の返り値の型(return_countが1なら)</td></tr>
@@ -467,7 +467,7 @@
 <tr><td>local_count</td><td><code class="tt">varuint32</code></td><td>ローカル変数の数</td></tr>
 <tr><td>locals</td><td><code class="tt">local_entry</code></td><td>ローカル変数列</td></tr>
 <tr><td>code</td><td><code class="tt">byte*</code></td><td>関数のバイトコード</td></tr>
-<tr><td>end</td><td>`byte</td><td><code class="tt">0x0b</code>、関数本体の終了</td></tr>
+<tr><td>end</td><td><code class="tt">byte</code></td><td><code class="tt">0x0b</code>、関数本体の終了</td></tr>
 </table>
 </div>
 
@@ -568,7 +568,7 @@ end
 <tr><th>名前</th><th>オペコード</th><th>即値</th><th>説明</th></tr>
 <tr><td><code class="tt">get_local</code></td><td><code class="tt">0x20</code></td><td>local_index: <code class="tt">varuint32</code></td><td>local_indexで指定されたローカル変数をスタックにpush</td></tr>
 <tr><td><code class="tt">set_local</code></td><td><code class="tt">0x21</code></td><td>local_index: <code class="tt">varuint32</code></td><td><code class="tt">op1</code>の値をlocal_indexで指定されたローカル変数にセット</td></tr>
-<tr><td><code class="tt">tee_local</code></td><td><code class="tt">0x21</code></td><td>local_index: <code class="tt">varuint32</code></td><td><code class="tt">op1</code>の値をlocal_indexで指定されたローカル変数にセットして、同じ値をpush</td></tr>
+<tr><td><code class="tt">tee_local</code></td><td><code class="tt">0x22</code></td><td>local_index: <code class="tt">varuint32</code></td><td><code class="tt">op1</code>の値をlocal_indexで指定されたローカル変数にセットして、同じ値をpush</td></tr>
 <tr><td><code class="tt">get_global</code></td><td><code class="tt">0x23</code></td><td>global_index: <code class="tt">varuint32</code></td><td>global_indexで指定されたグローバル変数をスタックにpush</td></tr>
 <tr><td><code class="tt">set_global</code></td><td><code class="tt">0x24</code></td><td>global_index: <code class="tt">varuint32</code></td><td><code class="tt">op1</code>の値をglobal_indexで指定されたグローバル変数にセット</td></tr>
 </table>
