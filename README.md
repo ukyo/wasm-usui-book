@@ -13,6 +13,20 @@ webassemblyの薄い本
 * [Binery Format](https://ukyo.github.io/wasm-usui-book/webroot/binary-format.html)
 * [Text Format](https://ukyo.github.io/wasm-usui-book/webroot/text-format.html)
 
+## Build
+
+web
+
+```
+$ rake web
+```
+
+pdf
+
+```
+$ rake pdf
+``` 
+
 ## 参考
 
 * [http://webassembly\.org](http://webassembly.org/), [repo](https://github.com/WebAssembly/website)
