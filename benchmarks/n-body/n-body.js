@@ -116,4 +116,5 @@ for (var i = 0; i < n; i++) {
     nbodies.advance(0.01);
 }
 console.log(nbodies.energy().toFixed(9));
-console.log("[js]: ", performance.now() - start);
+var node = document.createTextNode(`[js]: ${performance.now() - start}\n`);
+result.appendChild(node);

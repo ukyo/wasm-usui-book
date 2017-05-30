@@ -8,5 +8,6 @@ fetch("./n-body.wasm")
 .then(({module, instance}) => {
   var start = performance.now();
   instance.exports.main();
-  console.log("[wasm]: ", performance.now() - start);
+  var node = document.createTextNode(`[wasm]: ${performance.now() - start}\n`);
+  result.appendChild(node);
 });
